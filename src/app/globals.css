@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+:root {
+  --page-bg: #050814;
+  --surface: #0b1329;
+  --text: #f4f8ff;
+  --text-muted: #9db0d0;
+  --accent-primary: #32c8ff;
+  --accent-secondary: #23e3a8;
+  --accent-tertiary: #7e5eff;
+  --border: rgba(113, 140, 186, 0.25);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100%;
+}
+
+body {
+  font-family: var(--font-primary), 'Avenir Next', 'Segoe UI Variable', 'Trebuchet MS', sans-serif;
+  background: var(--page-bg);
+  color: var(--text);
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button {
+  font: inherit;
+}
