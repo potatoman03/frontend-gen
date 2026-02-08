@@ -254,13 +254,12 @@ Always THREE fonts with distinct roles. The typography system is what separates 
 
 Choose ONE hero technique. The LLM decides what serves the brief — 3D is powerful but not always appropriate.
 
-**Option A: 3D / WebGL hero** (Three.js / React Three Fiber)
+**Option A: 3D / WebGL hero** (React Three Fiber)
 - When: The brief benefits from cinematic immersion (tech products, creative studios, research labs)
-- In React: use React Three Fiber (`@react-three/fiber` + `@react-three/drei`) for declarative 3D
-- In vanilla HTML: use Three.js r128 from CDN
-- Procedural geometry + shaders — no external assets needed
-- Canvas contained to hero section, fades on scroll, stops rendering when invisible
-- See Section VII for geometry options: displacement blobs, particle networks, wireframe vehicles, faceted crystals, terrain
+- All 3D is built natively in React — procedural geometry + shaders, no external assets or APIs
+- Canvas behind hero content (position absolute, z-behind), text overlays the scene
+- Can extend beyond the hero: scroll-driven 3D sections, ambient floating elements, interactive showcases
+- See Section VII for full 3D guide: geometry options, scroll binding, Framer Motion 3D, performance rules
 
 **Option B: Kinetic typography hero**
 - When: The message IS the product (SaaS, agencies, content platforms)
@@ -376,6 +375,71 @@ Professional motion design follows these principles (inspired by Framer's produc
 - In Framer Motion: use `whileHover`, `whileTap`, and `whileFocus` for declarative interactive states
 - Transitions are consistent: use the chosen easing curve from Animation Architecture above
 
+### Scroll Animation Design
+
+Scroll is the primary interaction on a landing page. Every section should respond to it. These patterns range from simple (reveal on enter) to advanced (scroll-driven progress). Mix them for rhythm — not every section needs the same treatment.
+
+#### Pattern 1: Reveal on enter (foundation — use everywhere)
+
+Elements animate in when they enter the viewport. This is the baseline — every section should have at least this.
+
+- **Framer Motion**: `whileInView={{ opacity: 1, y: 0 }}` with `viewport={{ once: true, amount: 0.1 }}`
+- **Stagger siblings**: parent uses `staggerChildren: 0.08–0.15` so children cascade in sequence
+- **Direction**: elements slide up (`y: 30 → 0`), fade in (`opacity: 0 → 1`), or scale up (`scale: 0.95 → 1`). Pick one per section, don't mix.
+- **Never reveal all at once** — stagger is what makes it feel designed
+
+#### Pattern 2: Parallax depth
+
+Elements move at different speeds on scroll, creating a layered depth effect.
+
+- **Framer Motion**: `useScroll({ target: ref })` + `useTransform(scrollYProgress, [0, 1], [0, -100])` to shift elements at different rates
+- **Layers**: background moves slowest, midground at normal speed, foreground fastest. Even 20–40px of difference creates depth.
+- **Use cases**: hero background elements, decorative accents between sections, image + text offsets in editorial layouts
+- **Keep subtle** — parallax should feel like atmosphere, not a theme park ride
+
+#### Pattern 3: Scroll-linked progress
+
+An element's state is continuously driven by scroll position — not triggered once, but animated in real time as the user scrolls.
+
+- **Framer Motion**: `useScroll()` → `useTransform(scrollYProgress, [start, end], [fromValue, toValue])`
+- **GSAP**: `ScrollTrigger` with `scrub: true` — timeline plays forward/backward with scroll
+- **Use cases**:
+  - Progress bar that fills as user scrolls down the page
+  - Section heading that scales from small to large as it approaches center viewport
+  - Horizontal scroll gallery driven by vertical scroll
+  - Counter that increments as section scrolls into view
+  - Background color that transitions between sections
+- **Easing**: use `useSpring` (Framer Motion) or `scrub: 0.5` (GSAP) for smoothing — raw scroll values feel jittery
+
+#### Pattern 4: Pinned scroll sections
+
+A section sticks to the viewport while content inside it changes, driven by scroll progress. The user scrolls but the section stays in place.
+
+- **GSAP**: `ScrollTrigger` with `pin: true` — pin element for a scroll distance while animating children
+- **Framer Motion**: use `position: sticky` + `useScroll` on a tall wrapper div. The visible section is sticky, the wrapper provides scroll distance.
+- **Use cases**:
+  - Feature showcase: pinned left panel with title, right side cycles through feature descriptions as user scrolls
+  - Step-by-step walkthrough: pinned device mockup, screen content swaps on scroll
+  - Story reveal: text paragraphs fade in/out sequentially in a pinned frame
+- **Scroll distance**: the wrapper should be 200–400vh tall (each step gets ~100vh of scroll travel). Too short feels rushed, too long feels stuck.
+
+#### Pattern 5: Horizontal scroll
+
+Vertical scroll drives horizontal movement — a row of content slides sideways as the user scrolls down.
+
+- **Framer Motion**: `useScroll` on wrapper → `useTransform` mapped to `x` translation on a wide flex row
+- **GSAP**: `ScrollTrigger` with `pin: true` + `scrub` animating `xPercent` on the horizontal container
+- **Use cases**: project showcases, image galleries, timeline/changelog, feature tours
+- **Container**: the inner row is wider than the viewport (e.g., 4 panels at 80vw each). The outer wrapper's height equals the overflow (total width minus viewport width).
+
+#### Scroll animation rules
+
+- **Never animate on every frame without throttling** — bind scroll handlers to `requestAnimationFrame` or use Framer Motion's built-in hooks (they handle this automatically)
+- **`will-change: transform`** on scroll-animated elements — add when entering viewport, remove after animation completes
+- **Reduced motion** — for `prefers-reduced-motion`, disable all scroll-driven animations. Reveals become instant (no transition), pinned sections unpin, parallax layers flatten. Content must still be fully accessible.
+- **Mobile** — simplify or disable complex scroll patterns (pinned sections, horizontal scroll) below 810px. A pinned section that works on desktop with a mouse can feel broken on mobile with touch scroll. Fall back to stacked sections.
+- **Test scroll direction** — all patterns should work with both trackpad (smooth) and mouse wheel (stepped) scrolling
+
 ---
 
 ## IV. Anti-Slop Checklist
@@ -485,35 +549,46 @@ These small touches separate designed work from templates:
 
 ---
 
-## VII. 3D Hero Guidelines
+## VII. 3D & WebGL
 
-Only use when Decision 5 = Option A. These are principles, not code to copy.
+All 3D is built natively in React using **React Three Fiber** (`@react-three/fiber` + `@react-three/drei`). No external APIs, no Spline embeds, no pre-made model files. Everything is procedural — geometry, shaders, lighting, and animation are all code. This keeps bundles small, loads instant, and gives full creative control.
 
-### Two approaches
+Install: `three`, `@types/three`, `@react-three/fiber`, `@react-three/drei`.
 
-**Raw Three.js** — for vanilla HTML or single-file builds. Full shader control. Load from CDN.
+### Where to use 3D
 
-**React Three Fiber** (`@react-three/fiber` + `@react-three/drei`) — for React projects. Declarative scene graph in JSX, `useFrame` for animation loops, Drei helpers like `<Float>` and `<Stars>` when they add value. Install: `three`, `@types/three`, `@react-three/fiber`, `@react-three/drei`.
+3D is not limited to heroes. Use it anywhere it serves the design:
+
+| Placement | Technique | Example |
+|-----------|-----------|---------|
+| **Hero background** | Full-section canvas (position absolute, z-behind content) with procedural scene. Text overlays the 3D. | Particle field behind headline, displacement blob floating beside CTA |
+| **Scroll-driven section** | Canvas tied to scroll progress via `useScroll` (Framer Motion) or ScrollTrigger (GSAP). Geometry morphs, camera moves, or scene reveals as user scrolls. | Camera flies through a particle tunnel, wireframe object assembles on scroll, terrain reveals progressively |
+| **Ambient floating elements** | Small canvases between sections with looping animations. Decorative, not interactive. | Rotating crystal divider, orbiting ring between features and CTA |
+| **Interactive showcase** | Canvas responds to mouse/touch. User explores the scene. | Product visualization with orbit controls, data globe with hover tooltips |
 
 ### Core principles
 
-**Canvas containment** — the 3D canvas lives inside the hero section (position absolute), NOT full-page. It fades on scroll and stops rendering when invisible. Use IntersectionObserver to pause the animation loop entirely — don't just hide the canvas.
+**Canvas containment** — each 3D canvas lives inside its section (position absolute), never full-page. Use IntersectionObserver to pause the animation loop entirely when scrolled out of view — don't just hide the canvas.
 
-**Mouse interaction** — camera or geometry should respond to mouse via smooth lerp (0.03–0.05 interpolation factor). Never snap. The scene should feel alive but not twitchy.
+**Mouse interaction** — camera or geometry responds to mouse via smooth lerp (0.03–0.05 interpolation factor). Never snap. The scene should feel alive but not twitchy.
 
 **Fog** — match the scene fog color to the page background. FogExp2 at low density (0.04–0.08) creates depth without obscuring.
 
 **Tone mapping** — use ACES Filmic for cinematic color response.
 
+**Scroll binding** — for scroll-driven scenes, use Framer Motion's `useScroll` + `useTransform` to map scroll progress (0–1) to camera position, geometry rotation, material opacity, or morph targets. Keep the mapping smooth — use spring physics or eased interpolation, never linear jumps.
+
 ### Geometry directions
 
-Choose procedural geometry that serves the brief — no external models or assets:
+All geometry is procedural — no external models or assets:
 - **Particle networks** — scattered points with connection lines, good for science/tech/data themes
 - **Organic displacement** — icosahedron or sphere with noise-based vertex displacement, custom shaders for color mixing and fresnel rim glow
 - **Faceted crystals** — low-poly dodecahedrons with physical materials (metalness, clearcoat), companion floating planes and orbiting torus rings
 - **Wireframe terrain** — displaced plane geometry with wireframe material, good for aviation/landscape/mapping themes
-- **Wireframe objects** — recognizable shapes built from primitive geometries (boxes, cylinders, extrusions, tubes) composed in a group. Dual-material technique: transparent wireframe in signal color overlaid on dark solid mesh. Add particle fields for atmosphere and grid floors for grounding.
-- **Speed/motion particles** — streaming point clouds that reset position each frame, creating a sense of velocity. Pair with wireframe objects.
+- **Wireframe objects** — recognizable shapes from primitive geometries (boxes, cylinders, tubes) composed in a group. Dual-material: transparent wireframe in signal color overlaid on dark solid mesh. Add particle fields for atmosphere.
+- **Speed/motion particles** — streaming point clouds that reset position each frame, creating a sense of velocity
+- **Gradient orbs** — large spheres with custom shader materials (noise-based color mixing, animated uniforms). Blurred and translucent, used as ambient background elements.
+- **Morphing geometry** — shapes that transition between states on scroll (sphere → torus, cube → plane). Use morph targets or animated vertex shaders.
 
 ### Lighting (minimum 3)
 
@@ -522,30 +597,40 @@ Every scene needs at least 3 lights with distinct roles:
 - **Fill light** — contrasting hue to the key, static or slow drift, lower intensity
 - **Rim light** — signal color, high intensity, close range, creates edge definition
 
-In R3F these are JSX elements. In raw Three.js, create DirectionalLight and PointLight instances.
+### Framer Motion 3D (lightweight alternative)
+
+For simpler 3D effects that don't need a full WebGL scene, use Framer Motion's CSS 3D transforms:
+- `rotateX`, `rotateY`, `rotateZ` on cards for flip/tilt effects
+- `perspective` on parent containers for depth
+- `transformStyle: "preserve-3d"` for layered parallax
+- Scroll-driven tilt: bind `useScroll` progress to rotation values
+
+This is lighter than R3F and works for card flips, parallax depth layers, and hover tilt effects. Use R3F when you need actual 3D geometry, particles, or shaders.
 
 ### Performance rules
 
-- Cap pixel ratio at 2 (raw: `setPixelRatio`, R3F: `dpr={[1, 1.5]}`)
+- Cap pixel ratio at 2 (`dpr={[1, 1.5]}` in R3F)
 - Max 800 particles for particle systems
-- Stop the entire animation loop when scrolled out of view
+- Stop the entire animation loop when scrolled out of view (IntersectionObserver)
 - No shadows unless the design specifically demands them
-- Keep geometry detail reasonable (40-64 subdivisions max for displacement)
-- In R3F: memoize materials and geometries to prevent re-creation on render
+- Keep geometry detail reasonable (40–64 subdivisions max for displacement)
+- Memoize materials and geometries to prevent re-creation on render
+- For scroll-driven scenes, throttle scroll handler to `requestAnimationFrame`
+- On mobile (< 810px), simplify or disable 3D — reduce particle count by 50%, lower geometry detail, or replace with a static gradient fallback
 
 ---
 
 ## VIII. What This Skill Produces vs. What It Doesn't
 
 **This skill produces:**
-- Single-file frontends (.html or .jsx) that look handcrafted
+- Full React projects with production-quality code
 - Distinctive, non-repeating designs across generations
-- Accessible, performant, production-quality code
+- Accessible, performant, responsive frontends
+- Native 3D/WebGL scenes — procedural, no external assets or APIs
 - Sites that feel like they belong on Awwwards, not in a template gallery
 
 **This skill does NOT produce:**
-- Multi-file project scaffolds (unless requested)
 - Backend logic or API integrations
 - Content strategy or copywriting (it uses placeholder content that fits the tone)
-- External 3D model loading (all 3D is procedural, no assets needed)
+- External 3D model loading (all 3D is procedural — no .glb/.gltf files)
 
