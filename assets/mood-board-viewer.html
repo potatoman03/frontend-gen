@@ -1,0 +1,2985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Design Workbench — Frontend Studio</title>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Figtree:wght@400;500;600&family=Geist+Mono&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --bg: #0e1018;
+    --surface: #161922;
+    --surface-2: #1c2030;
+    --border: rgba(255,255,255,0.08);
+    --border-active: rgba(255,255,255,0.18);
+    --text: #e8e6e1;
+    --text-muted: rgba(232,230,225,0.45);
+    --accent: #c084fc;
+    --accent-dim: rgba(192,132,252,0.12);
+    --danger: #f87171;
+    --danger-dim: rgba(248,113,113,0.1);
+    --success: #34d399;
+    --success-dim: rgba(52,211,153,0.1);
+    --radius: 8px;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Figtree', system-ui, sans-serif;
+    line-height: 1.6;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  body::after {
+    content: '';
+    position: fixed; inset: 0; z-index: 99999; pointer-events: none;
+    opacity: 0.02;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  ::selection { background: var(--accent); color: var(--bg); }
+
+  /* ── Header ── */
+  .header {
+    text-align: center;
+    padding: 3.5rem 2rem 1rem;
+  }
+
+  .header-tag {
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+  }
+
+  .header-tag::before, .header-tag::after {
+    content: '';
+    width: 24px; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent), transparent);
+  }
+
+  .header h1 {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-weight: 400;
+    font-size: 2.8rem;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin-bottom: 0.5rem;
+  }
+
+  .header p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    max-width: 520px;
+    margin: 0 auto;
+  }
+
+  /* ── Phase labels ── */
+  .phase-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--accent);
+    padding: 2rem 2rem 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .phase-label::before {
+    content: '';
+    width: 16px; height: 1px;
+    background: var(--accent);
+  }
+
+  .phase-label.disabled { color: var(--text-muted); opacity: 0.4; }
+  .phase-label.disabled::before { background: var(--text-muted); }
+
+  /* ── Section label (reused from original) ── */
+  .section-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.5rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .section-label::before {
+    content: '';
+    width: 12px; height: 1px;
+    background: currentColor;
+  }
+
+  /* ── Phase 1: Board cards ── */
+  .boards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--border);
+    margin: 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .board {
+    background: var(--bg);
+    padding: 2.5rem 2rem;
+    position: relative;
+    transition: background 0.3s ease;
+    cursor: pointer;
+  }
+
+  .board:hover { background: var(--surface); }
+
+  .board.selected {
+    background: var(--surface);
+    box-shadow: inset 0 0 0 2px var(--accent);
+  }
+
+  .board-number {
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+  }
+
+  .board-name {
+    font-family: 'Instrument Serif', serif;
+    font-style: italic;
+    font-size: 1.8rem;
+    line-height: 1.15;
+    margin-bottom: 0.25rem;
+  }
+
+  .board-vibe {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 2rem;
+    font-style: italic;
+  }
+
+  /* Palette */
+  .palette {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+  }
+
+  .swatch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+  }
+
+  .swatch-color {
+    width: 44px; height: 44px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    transition: transform 0.2s ease;
+  }
+
+  .swatch-color:hover { transform: scale(1.1); }
+
+  .swatch-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.45rem;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  .swatch-hex {
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.5rem;
+    color: var(--text-muted);
+  }
+
+  /* Typography preview */
+  .type-preview {
+    margin-bottom: 2rem;
+    padding: 1.25rem;
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+  }
+
+  .board.selected .type-preview { background: var(--surface-2); }
+
+  .type-display {
+    font-size: 2rem;
+    line-height: 1.1;
+    margin-bottom: 0.6rem;
+    letter-spacing: -0.02em;
+  }
+
+  .type-body {
+    font-size: 0.85rem;
+    line-height: 1.7;
+    color: var(--text-muted);
+    margin-bottom: 0.6rem;
+  }
+
+  .type-mono {
+    font-size: 0.55rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .type-font-name {
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.45rem;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    text-transform: uppercase;
+    display: block;
+    margin-top: 0.15rem;
+  }
+
+  /* Hero technique */
+  .hero-tag { margin-bottom: 2rem; }
+
+  .hero-technique {
+    font-size: 0.9rem;
+    line-height: 1.5;
+    padding: 0.75rem 1rem;
+    background: var(--surface);
+    border-radius: 6px;
+    border-left: 2px solid var(--accent);
+  }
+
+  .board.selected .hero-technique { background: var(--surface-2); }
+
+  /* Sections */
+  .section-plan { margin-bottom: 1.5rem; }
+
+  .section-plan ol {
+    list-style: none;
+    counter-reset: sections;
+  }
+
+  .section-plan li {
+    counter-increment: sections;
+    font-size: 0.8rem;
+    padding: 0.4rem 0;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--text-muted);
+    transition: color 0.2s ease;
+  }
+
+  .section-plan li:hover { color: var(--text); }
+
+  .section-plan li::before {
+    content: counter(sections, decimal-leading-zero);
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.5rem;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    min-width: 1.5rem;
+  }
+
+  /* Select button */
+  .select-btn {
+    display: block;
+    width: 100%;
+    margin-top: 1.5rem;
+    padding: 0.75rem 1.5rem;
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-muted);
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .select-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  .board.selected .select-btn {
+    border-color: var(--accent);
+    color: var(--bg);
+    background: var(--accent);
+  }
+
+  /* ── Mix-and-match bar ── */
+  .mix-bar {
+    padding: 1.5rem 2rem;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+    display: none;
+  }
+
+  .mix-bar.visible { display: block; }
+
+  .mix-bar-inner {
+    max-width: 1100px;
+    margin: 0 auto;
+  }
+
+  .mix-bar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+  }
+
+  .mix-bar-title {
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .mix-bar-preview {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .mix-preview-swatches {
+    display: flex;
+    gap: 3px;
+  }
+
+  .mix-preview-swatch {
+    width: 18px; height: 18px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+
+  .mix-preview-fonts {
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.45rem;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  .mix-categories {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1px;
+    background: var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .mix-category {
+    background: var(--bg);
+    padding: 1rem;
+  }
+
+  .mix-cat-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.45rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.6rem;
+  }
+
+  .mix-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.3rem 0;
+    cursor: pointer;
+    transition: color 0.15s ease;
+  }
+
+  .mix-option:hover { color: var(--text); }
+
+  .mix-radio {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    border: 1.5px solid var(--border-active);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: border-color 0.15s ease;
+  }
+
+  .mix-radio .dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    opacity: 0;
+    transform: scale(0);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .mix-option.active .mix-radio { border-color: var(--accent); }
+  .mix-option.active .mix-radio .dot { opacity: 1; transform: scale(1); }
+
+  .mix-option-label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+
+  .mix-option.active .mix-option-label { color: var(--text); }
+
+  /* ── Phase 2: Section builder ── */
+  .section-builder {
+    padding: 0 2rem 2rem;
+    max-width: 900px;
+    margin: 0 auto;
+    display: none;
+  }
+
+  .section-builder.visible { display: block; }
+
+  .sortable-list {
+    list-style: none;
+  }
+
+  .section-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem 1.25rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 0.5rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .section-item:hover { border-color: var(--border-active); }
+
+  .section-item.sortable-ghost {
+    opacity: 0.4;
+    border-color: var(--accent);
+  }
+
+  .section-item.sortable-chosen {
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    border-color: var(--accent);
+  }
+
+  .drag-handle {
+    cursor: grab;
+    color: var(--text-muted);
+    font-size: 1rem;
+    line-height: 1;
+    padding: 0.25rem 0;
+    user-select: none;
+    flex-shrink: 0;
+    transition: color 0.15s ease;
+  }
+
+  .drag-handle:hover { color: var(--text); }
+  .drag-handle:active { cursor: grabbing; }
+
+  .section-number {
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 0.1em;
+    color: var(--accent);
+    min-width: 1.8rem;
+    padding-top: 0.35rem;
+    flex-shrink: 0;
+  }
+
+  .section-content { flex: 1; min-width: 0; }
+
+  .section-name-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .section-name {
+    font-size: 0.9rem;
+    font-weight: 500;
+    background: none;
+    border: none;
+    color: var(--text);
+    font-family: 'Figtree', sans-serif;
+    outline: none;
+    padding: 0.15rem 0;
+    border-bottom: 1px solid transparent;
+    transition: border-color 0.2s ease;
+    width: 100%;
+  }
+
+  .section-name:focus {
+    border-bottom-color: var(--accent);
+  }
+
+  .section-wireframe-hint {
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.4rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.4rem;
+  }
+
+  .section-wireframe-mini {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 0.5rem;
+    height: 12px;
+  }
+
+  .wire-mini {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 2px;
+    flex: 1;
+  }
+
+  .wire-mini.narrow { flex: 0.4; }
+  .wire-mini.wide { flex: 0.6; }
+
+  .note-toggle {
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.5rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0.25rem 0;
+    transition: color 0.15s ease;
+  }
+
+  .note-toggle:hover { color: var(--accent); }
+  .note-toggle.has-note { color: var(--accent); }
+
+  .note-area {
+    display: none;
+    margin-top: 0.5rem;
+  }
+
+  .note-area.visible { display: block; }
+
+  .note-textarea {
+    width: 100%;
+    min-height: 48px;
+    padding: 0.6rem 0.75rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Figtree', sans-serif;
+    font-size: 0.8rem;
+    line-height: 1.5;
+    resize: vertical;
+    outline: none;
+    transition: border-color 0.2s ease;
+  }
+
+  .note-textarea:focus { border-color: var(--accent); }
+
+  .note-textarea::placeholder { color: var(--text-muted); }
+
+  .section-actions {
+    flex-shrink: 0;
+    padding-top: 0.25rem;
+  }
+
+  .remove-btn {
+    width: 28px; height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: all 0.15s ease;
+  }
+
+  .remove-btn:hover {
+    border-color: var(--danger);
+    color: var(--danger);
+    background: var(--danger-dim);
+  }
+
+  /* Add section */
+  .add-section-wrap {
+    position: relative;
+    margin-top: 0.75rem;
+  }
+
+  .add-section-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    padding: 0.85rem;
+    background: transparent;
+    border: 1px dashed var(--border);
+    border-radius: var(--radius);
+    color: var(--text-muted);
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .add-section-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: var(--accent-dim);
+  }
+
+  .add-dropdown {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 4px);
+    left: 0; right: 0;
+    background: var(--surface-2);
+    border: 1px solid var(--border-active);
+    border-radius: var(--radius);
+    padding: 0.5rem;
+    z-index: 100;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+    max-height: 260px;
+    overflow-y: auto;
+  }
+
+  .add-dropdown.visible { display: block; }
+
+  .add-option {
+    display: block;
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-family: 'Figtree', sans-serif;
+    font-size: 0.8rem;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.1s ease;
+  }
+
+  .add-option:hover {
+    background: var(--accent-dim);
+    color: var(--text);
+  }
+
+  .add-custom-input {
+    width: 100%;
+    padding: 0.5rem 0.75rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: 'Figtree', sans-serif;
+    font-size: 0.8rem;
+    outline: none;
+    margin-top: 0.25rem;
+  }
+
+  .add-custom-input:focus { border-color: var(--accent); }
+  .add-custom-input::placeholder { color: var(--text-muted); }
+
+  /* ── Phase 3: Confirm ── */
+  .confirm-phase {
+    padding: 2rem;
+    max-width: 800px;
+    margin: 0 auto;
+    display: none;
+  }
+
+  .confirm-phase.visible { display: block; }
+
+  .confirm-btn {
+    display: block;
+    width: 100%;
+    padding: 1rem 2rem;
+    background: var(--accent);
+    border: none;
+    border-radius: var(--radius);
+    color: var(--bg);
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.65rem;
+    font-weight: 600;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .confirm-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 32px rgba(192,132,252,0.25);
+  }
+
+  .confirm-btn:active { transform: translateY(0); }
+
+  .output-wrap {
+    display: none;
+    margin-top: 1.5rem;
+  }
+
+  .output-wrap.visible { display: block; }
+
+  .output-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+  }
+
+  .output-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.5rem;
+    letter-spacing: 0.25em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .copy-btn {
+    padding: 0.4rem 0.85rem;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.5rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .copy-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  .copy-btn.copied {
+    border-color: var(--success);
+    color: var(--success);
+    background: var(--success-dim);
+  }
+
+  .output-json {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.25rem;
+    overflow-x: auto;
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.7rem;
+    line-height: 1.6;
+    color: var(--text-muted);
+    white-space: pre;
+    tab-size: 2;
+  }
+
+  .output-instruction {
+    margin-top: 1rem;
+    text-align: center;
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.55rem;
+    letter-spacing: 0.15em;
+    color: var(--text-muted);
+    padding-bottom: 4rem;
+  }
+
+  /* Hidden textarea for agent to read */
+  #FINAL_SPEC { display: none; }
+
+  /* ── Responsive ── */
+  @media (max-width: 900px) {
+    .boards { grid-template-columns: 1fr; }
+    .header h1 { font-size: 2rem; }
+    .mix-categories { grid-template-columns: repeat(2, 1fr); }
+    .mix-categories > :last-child {
+      grid-column: 1 / -1;
+    }
+  }
+
+  /* ── Board mockup (Phase 1 mini page previews) ── */
+  .board-mockup {
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    margin-bottom: 1.5rem;
+    font-size: 0;
+    line-height: 0;
+  }
+
+  .mockup-hero {
+    padding: 2rem 1.5rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .mockup-hero-tag {
+    font-size: 0.4rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.5;
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+  }
+
+  .mockup-hero h3 {
+    font-size: 1.4rem;
+    line-height: 1.15;
+    margin-bottom: 0.4rem;
+    letter-spacing: -0.02em;
+  }
+
+  .mockup-hero p {
+    font-size: 0.6rem;
+    line-height: 1.5;
+    opacity: 0.6;
+    margin-bottom: 0.75rem;
+    max-width: 80%;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .mockup-btn {
+    display: inline-block;
+    padding: 0.4rem 1.2rem;
+    border-radius: 4px;
+    font-size: 0.5rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    line-height: 1.4;
+  }
+
+  .mockup-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+  }
+
+  .mockup-metric {
+    padding: 0.75rem 0.5rem;
+    text-align: center;
+  }
+
+  .mockup-metric-value {
+    font-size: 1rem;
+    line-height: 1.2;
+    margin-bottom: 0.15rem;
+  }
+
+  .mockup-metric-label {
+    font-size: 0.35rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    opacity: 0.5;
+    line-height: 1.4;
+  }
+
+  .mockup-features {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    padding: 1px;
+  }
+
+  .mockup-feature {
+    padding: 0.75rem 0.6rem;
+    text-align: center;
+  }
+
+  .mockup-feature-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin: 0 auto 0.4rem;
+  }
+
+  .mockup-feature h4 {
+    font-size: 0.55rem;
+    line-height: 1.3;
+    margin-bottom: 0.2rem;
+    font-weight: 500;
+  }
+
+  .mockup-feature p {
+    font-size: 0.4rem;
+    line-height: 1.4;
+    opacity: 0.5;
+  }
+
+  .mockup-cta {
+    padding: 1.25rem 1rem;
+    text-align: center;
+  }
+
+  .mockup-cta h3 {
+    font-size: 0.85rem;
+    line-height: 1.2;
+    margin-bottom: 0.35rem;
+  }
+
+  .mockup-cta p {
+    font-size: 0.45rem;
+    line-height: 1.4;
+    opacity: 0.5;
+    margin-bottom: 0.5rem;
+  }
+
+  .mockup-footer {
+    padding: 0.75rem 1rem;
+    display: flex;
+    gap: 1rem;
+  }
+
+  .mockup-footer-col {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .mockup-footer-heading {
+    font-size: 0.4rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.4;
+    margin-bottom: 0.25rem;
+    line-height: 1.4;
+  }
+
+  .mockup-footer-line {
+    height: 2px;
+    border-radius: 1px;
+    opacity: 0.15;
+    margin-bottom: 0.2rem;
+    width: 70%;
+  }
+
+  /* Token summary (compact row below mockup) */
+  .token-summary {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+  }
+
+  .token-summary .palette {
+    display: flex;
+    gap: 3px;
+    margin-bottom: 0;
+  }
+
+  .token-summary .swatch-color {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+  }
+
+  .token-summary-fonts {
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.45rem;
+    letter-spacing: 0.1em;
+    color: var(--text-muted);
+    text-transform: uppercase;
+  }
+
+  .token-summary-tags {
+    display: flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+  }
+
+  .token-summary-tag {
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.4rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 0.15rem 0.4rem;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+  }
+
+  /* ── Section previews (Phase 2 rich component wireframes) ── */
+  .section-preview {
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+    margin-bottom: 0.5rem;
+    font-size: 0;
+    line-height: 0;
+  }
+
+  .preview-hero {
+    padding: 1.5rem 1.25rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .preview-hero-glow {
+    position: absolute;
+    top: -30%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    height: 80%;
+    border-radius: 50%;
+    opacity: 0.1;
+    filter: blur(40px);
+    pointer-events: none;
+  }
+
+  .preview-hero-tag {
+    font-size: 0.4rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.5;
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+    position: relative;
+  }
+
+  .preview-hero h3 {
+    font-size: 1.1rem;
+    line-height: 1.15;
+    margin-bottom: 0.3rem;
+    letter-spacing: -0.02em;
+    position: relative;
+  }
+
+  .preview-hero p {
+    font-size: 0.55rem;
+    line-height: 1.5;
+    opacity: 0.5;
+    margin-bottom: 0.6rem;
+    position: relative;
+  }
+
+  .preview-btn {
+    display: inline-block;
+    padding: 0.35rem 1rem;
+    border-radius: 4px;
+    font-size: 0.45rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    line-height: 1.4;
+    position: relative;
+  }
+
+  .preview-metrics {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+  }
+
+  .preview-metric {
+    padding: 0.6rem 0.4rem;
+    text-align: center;
+  }
+
+  .preview-metric-value {
+    font-size: 0.9rem;
+    line-height: 1.2;
+    margin-bottom: 0.1rem;
+  }
+
+  .preview-metric-label {
+    font-size: 0.35rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    opacity: 0.5;
+    line-height: 1.4;
+  }
+
+  .preview-split {
+    display: grid;
+    grid-template-columns: 2fr 3fr;
+    gap: 1px;
+  }
+
+  .preview-split-text {
+    padding: 1rem;
+  }
+
+  .preview-split-tag {
+    font-size: 0.35rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    opacity: 0.5;
+    margin-bottom: 0.4rem;
+    line-height: 1.4;
+  }
+
+  .preview-split-text h3 {
+    font-size: 0.8rem;
+    line-height: 1.2;
+    margin-bottom: 0.3rem;
+  }
+
+  .preview-split-text p {
+    font-size: 0.45rem;
+    line-height: 1.6;
+    opacity: 0.5;
+  }
+
+  .preview-split-image {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.15;
+    font-size: 0.4rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    line-height: 1;
+    min-height: 80px;
+  }
+
+  .preview-cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    padding: 1px;
+  }
+
+  .preview-card {
+    padding: 0.75rem 0.6rem;
+  }
+
+  .preview-card-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    margin-bottom: 0.4rem;
+  }
+
+  .preview-card h4 {
+    font-size: 0.5rem;
+    line-height: 1.3;
+    margin-bottom: 0.2rem;
+    font-weight: 500;
+  }
+
+  .preview-card p {
+    font-size: 0.38rem;
+    line-height: 1.5;
+    opacity: 0.5;
+  }
+
+  .preview-pub-list {
+    padding: 0.5rem 0;
+  }
+
+  .preview-pub-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid;
+  }
+
+  .preview-pub-row:last-child {
+    border-bottom: none;
+  }
+
+  .preview-pub-date {
+    font-size: 0.35rem;
+    letter-spacing: 0.1em;
+    opacity: 0.4;
+    min-width: 50px;
+    line-height: 1.4;
+  }
+
+  .preview-pub-title {
+    font-size: 0.5rem;
+    flex: 1;
+    line-height: 1.4;
+  }
+
+  .preview-pub-arrow {
+    font-size: 0.5rem;
+    opacity: 0.3;
+    line-height: 1;
+  }
+
+  .preview-marquee {
+    padding: 0.4rem 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+
+  .preview-marquee-text {
+    font-size: 0.4rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    line-height: 1.4;
+    padding: 0.3rem 0.75rem;
+  }
+
+  .preview-testimonials {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    padding: 1px;
+  }
+
+  .preview-quote {
+    padding: 0.75rem;
+  }
+
+  .preview-quote-text {
+    font-size: 0.45rem;
+    line-height: 1.6;
+    font-style: italic;
+    opacity: 0.7;
+    margin-bottom: 0.35rem;
+  }
+
+  .preview-quote-attr {
+    font-size: 0.35rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.4;
+    line-height: 1.4;
+  }
+
+  .preview-team {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    padding: 1px;
+  }
+
+  .preview-team-card {
+    padding: 0.75rem;
+    text-align: center;
+  }
+
+  .preview-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    opacity: 0.15;
+    margin: 0 auto 0.35rem;
+  }
+
+  .preview-team-name {
+    font-size: 0.45rem;
+    line-height: 1.3;
+    font-weight: 500;
+  }
+
+  .preview-team-role {
+    font-size: 0.35rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.4;
+    line-height: 1.4;
+  }
+
+  .preview-cta {
+    padding: 1.25rem 1rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .preview-cta-glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 50%;
+    height: 120%;
+    border-radius: 50%;
+    opacity: 0.06;
+    filter: blur(30px);
+    pointer-events: none;
+  }
+
+  .preview-cta h3 {
+    font-size: 0.75rem;
+    line-height: 1.2;
+    margin-bottom: 0.25rem;
+    position: relative;
+  }
+
+  .preview-cta p {
+    font-size: 0.4rem;
+    line-height: 1.5;
+    opacity: 0.5;
+    margin-bottom: 0.5rem;
+    position: relative;
+  }
+
+  .preview-footer {
+    padding: 0.6rem 0.75rem;
+    display: flex;
+    gap: 0.75rem;
+    border-top: 1px solid;
+  }
+
+  .preview-footer-col {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .preview-footer-heading {
+    font-size: 0.35rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.4;
+    margin-bottom: 0.2rem;
+    line-height: 1.4;
+  }
+
+  .preview-footer-line {
+    height: 2px;
+    border-radius: 1px;
+    opacity: 0.12;
+    margin-bottom: 0.15rem;
+    width: 65%;
+  }
+
+  /* ── Color picker row ── */
+  .color-picker-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .color-picker-row {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+    align-items: flex-start;
+  }
+
+  .color-picker-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+  }
+
+  .color-picker-input {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 36px;
+    height: 36px;
+    border: 2px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    background: none;
+    padding: 0;
+    transition: border-color 0.15s ease;
+  }
+
+  .color-picker-input:hover {
+    border-color: var(--accent);
+  }
+
+  .color-picker-input::-webkit-color-swatch-wrapper {
+    padding: 2px;
+  }
+
+  .color-picker-input::-webkit-color-swatch {
+    border: none;
+    border-radius: 3px;
+  }
+
+  .color-picker-input::-moz-color-swatch {
+    border: none;
+    border-radius: 3px;
+  }
+
+  .color-picker-label {
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.4rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .color-picker-desc {
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.35rem;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    opacity: 0.6;
+    max-width: 56px;
+    text-align: center;
+    line-height: 1.3;
+  }
+
+  .color-picker-hex {
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.4rem;
+    color: var(--text-muted);
+    cursor: text;
+    background: none;
+    border: 1px solid transparent;
+    border-radius: 3px;
+    padding: 0.1rem 0.2rem;
+    width: 56px;
+    text-align: center;
+    color: var(--text-muted);
+    outline: none;
+    transition: border-color 0.15s ease;
+  }
+
+  .color-picker-hex:focus {
+    border-color: var(--accent);
+    color: var(--text);
+  }
+
+  .color-reset-btn {
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.45rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 0.3rem 0.6rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    align-self: center;
+    margin-left: auto;
+  }
+
+  .color-reset-btn:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+  }
+
+  /* ── Animation tech selector ── */
+  .anim-section {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .anim-options {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  .anim-chip {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.35rem 0.75rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-family: 'Figtree', sans-serif;
+    font-size: 0.7rem;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    user-select: none;
+  }
+
+  .anim-chip:hover {
+    border-color: var(--border-active);
+    color: var(--text);
+  }
+
+  .anim-chip.selected {
+    border-color: var(--accent);
+    color: var(--text);
+    background: var(--accent-dim);
+  }
+
+  .anim-chip-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.4;
+    transition: opacity 0.15s ease;
+  }
+
+  .anim-chip.selected .anim-chip-dot {
+    background: var(--accent);
+    opacity: 1;
+  }
+
+  .anim-chip-desc {
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.4rem;
+    letter-spacing: 0.05em;
+    color: var(--text-muted);
+    opacity: 0.6;
+  }
+
+  .anim-preview {
+    margin-top: 0.75rem;
+    padding: 1rem;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    display: none;
+  }
+
+  .anim-preview.visible { display: block; }
+
+  .anim-preview-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.75rem;
+  }
+
+  .anim-preview-title {
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.45rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+
+  .anim-preview-note {
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.35rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    opacity: 0.5;
+  }
+
+  .anim-preview-demo {
+    height: 120px;
+    border-radius: 6px;
+    overflow: hidden;
+    position: relative;
+    background: var(--surface);
+    border: 1px solid var(--border);
+  }
+
+  .anim-preview-caption {
+    margin-top: 0.5rem;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+  }
+
+  .anim-preview-techniques {
+    margin-top: 0.5rem;
+    display: flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+  }
+
+  .anim-preview-tag {
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.38rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding: 0.15rem 0.4rem;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+  }
+
+  /* Framer motion demo */
+  .fm-demo-cards {
+    display: flex; gap: 8px; align-items: center; justify-content: center; height: 100%; padding: 0 1rem;
+  }
+  .fm-demo-card {
+    width: 60px; height: 70px; border-radius: 6px; background: var(--accent-dim); border: 1px solid var(--accent);
+    opacity: 0; transform: translateY(20px);
+    animation: fmReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  }
+  .fm-demo-card:nth-child(2) { animation-delay: 0.1s; }
+  .fm-demo-card:nth-child(3) { animation-delay: 0.2s; }
+  .fm-demo-card:nth-child(4) { animation-delay: 0.3s; }
+  @keyframes fmReveal { to { opacity: 1; transform: translateY(0); } }
+
+  /* GSAP demo */
+  .gsap-demo-bar {
+    position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+    height: 4px; background: var(--accent); border-radius: 2px;
+    animation: gsapSweep 2s cubic-bezier(0.6, 0, 0.05, 1) infinite;
+  }
+  .gsap-demo-dot {
+    position: absolute; width: 12px; height: 12px; border-radius: 50%; background: var(--accent);
+    top: 50%; transform: translateY(-50%);
+    animation: gsapDot 2s cubic-bezier(0.6, 0, 0.05, 1) infinite;
+  }
+  @keyframes gsapSweep { 0% { width: 0; } 50% { width: 100%; } 100% { width: 0; left: 100%; } }
+  @keyframes gsapDot { 0% { left: 0; } 50% { left: calc(100% - 12px); } 100% { left: 0; } }
+
+  /* Three.js demo */
+  .three-demo-scene {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(ellipse at center, rgba(192,132,252,0.08) 0%, transparent 70%);
+  }
+  .three-demo-shape {
+    width: 60px; height: 60px; border: 1.5px solid var(--accent); border-radius: 50%;
+    animation: threeFloat 3s ease-in-out infinite, threeSpin 8s linear infinite;
+    box-shadow: 0 0 20px rgba(192,132,252,0.2), inset 0 0 20px rgba(192,132,252,0.05);
+  }
+  .three-demo-ring {
+    position: absolute; width: 90px; height: 90px; border: 1px solid rgba(192,132,252,0.2); border-radius: 50%;
+    animation: threeSpin 12s linear infinite reverse;
+  }
+  .three-demo-ring::after {
+    content: ''; position: absolute; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; top: -3px; left: 50%; transform: translateX(-50%);
+  }
+  @keyframes threeFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+  @keyframes threeSpin { to { transform: rotate(360deg); } }
+
+  /* Spine demo */
+  .spine-demo-figure {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: 40px; height: 60px;
+  }
+  .spine-joint { position: absolute; width: 6px; height: 6px; background: var(--accent); border-radius: 50%; }
+  .spine-bone { position: absolute; height: 2px; background: rgba(192,132,252,0.4); transform-origin: left center; }
+  .spine-torso { left: 17px; top: 10px; width: 2px; height: 24px; background: rgba(192,132,252,0.4); }
+  .spine-head { left: 15px; top: 2px; width: 10px; height: 10px; border: 1.5px solid var(--accent); border-radius: 50%; }
+  .spine-arm-l { left: 6px; top: 14px; width: 14px; animation: spineSwing 1.5s ease-in-out infinite; }
+  .spine-arm-r { left: 20px; top: 14px; width: 14px; animation: spineSwing 1.5s ease-in-out infinite reverse; }
+  .spine-leg-l { left: 10px; top: 32px; width: 12px; animation: spineSwing 1.2s ease-in-out infinite 0.1s; }
+  .spine-leg-r { left: 20px; top: 32px; width: 12px; animation: spineSwing 1.2s ease-in-out infinite 0.4s reverse; }
+  @keyframes spineSwing { 0%,100% { transform: rotate(-15deg); } 50% { transform: rotate(15deg); } }
+
+  /* Lottie demo */
+  .lottie-demo-circle {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    width: 50px; height: 50px; border-radius: 50%; border: 2px solid var(--accent);
+    animation: lottieDraw 1.5s ease-in-out infinite;
+  }
+  .lottie-demo-check {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%) rotate(-45deg);
+    width: 20px; height: 10px; border-left: 2px solid var(--accent); border-bottom: 2px solid var(--accent);
+    opacity: 0; animation: lottieCheck 1.5s ease-in-out infinite;
+  }
+  @keyframes lottieDraw { 0% { transform: translate(-50%,-50%) scale(0.8); opacity: 0; } 50%,100% { transform: translate(-50%,-50%) scale(1); opacity: 1; } }
+  @keyframes lottieCheck { 0%,40% { opacity: 0; } 60%,100% { opacity: 1; } }
+
+  /* CSS-only demo */
+  .css-demo-grid {
+    position: absolute; inset: 0; display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; padding: 12px;
+    align-items: end;
+  }
+  .css-demo-bar {
+    background: var(--accent-dim); border: 1px solid var(--accent); border-radius: 3px 3px 0 0;
+    animation: cssGrow 2s cubic-bezier(0.16, 1, 0.3, 1) infinite alternate;
+  }
+  .css-demo-bar:nth-child(1) { animation-delay: 0s; }
+  .css-demo-bar:nth-child(2) { animation-delay: 0.15s; }
+  .css-demo-bar:nth-child(3) { animation-delay: 0.3s; }
+  .css-demo-bar:nth-child(4) { animation-delay: 0.45s; }
+  .css-demo-bar:nth-child(5) { animation-delay: 0.6s; }
+  .css-demo-bar:nth-child(6) { animation-delay: 0.75s; }
+  @keyframes cssGrow { 0% { height: 20%; } 100% { height: 90%; } }
+
+  /* Rive demo */
+  .rive-demo-btn {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+    padding: 0.5rem 1.5rem; border: 1.5px solid var(--accent); border-radius: 6px;
+    font-family: 'Geist Mono', monospace; font-size: 0.5rem; letter-spacing: 0.15em;
+    text-transform: uppercase; color: var(--accent); background: var(--accent-dim);
+    animation: riveHover 2.5s ease-in-out infinite;
+  }
+  .rive-demo-btn::after {
+    content: ''; position: absolute; inset: -4px; border-radius: 10px; border: 1px solid var(--accent);
+    opacity: 0; animation: rivePulse 2.5s ease-in-out infinite;
+  }
+  @keyframes riveHover { 0%,100% { transform: translate(-50%,-50%) scale(1); } 50% { transform: translate(-50%,-50%) scale(1.05); background: rgba(192,132,252,0.2); } }
+  @keyframes rivePulse { 0%,100% { opacity: 0; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.1); } }
+
+  /* Merged preview mockup */
+  .merged-preview {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+  }
+
+  .merged-preview .board-mockup {
+    max-width: 500px;
+    margin: 0 auto;
+  }
+
+  /* ── Loading ── */
+  .loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    font-family: 'Geist Mono', monospace;
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <div class="loading">Loading mood boards…</div>
+</div>
+
+<textarea id="FINAL_SPEC"></textarea>
+
+<script>
+// The agent injects mood board data here:
+const MOOD_BOARD_DATA = null;
+
+// ── State ──
+const state = {
+  selectedBoard: null,
+  tokenOverrides: {
+    palette: null,
+    typography: null,
+    layout: null,
+    hero: null,
+    aesthetic: null,
+  },
+  customColors: {},    // e.g. { background: '#fff', signal: '#f00' }
+  animationTech: null, // e.g. 'framer-motion'
+  sections: [],
+};
+
+const ANIMATION_OPTIONS = [
+  { id: 'framer-motion', name: 'Framer Motion', desc: 'React spring physics' },
+  { id: 'gsap', name: 'GSAP', desc: 'Timeline animation' },
+  { id: 'threejs', name: 'Three.js', desc: '3D WebGL scenes' },
+  { id: 'spine', name: 'Spine', desc: '2D skeletal animation' },
+  { id: 'lottie', name: 'Lottie', desc: 'After Effects JSON' },
+  { id: 'css', name: 'CSS Only', desc: 'Transitions & keyframes' },
+  { id: 'rive', name: 'Rive', desc: 'Interactive state machines' },
+];
+
+const SECTION_TYPES = [
+  'Hero',
+  'Metrics bar',
+  'Split editorial',
+  'Feature cards',
+  'Publication list',
+  'Marquee',
+  'Team grid',
+  'Testimonials',
+  'CTA',
+  'Footer',
+];
+
+// ── Helpers ──
+function esc(str) {
+  if (!str) return '';
+  const el = document.createElement('span');
+  el.textContent = String(str);
+  return el.innerHTML;
+}
+
+function loadFonts(boards) {
+  const families = new Set();
+  boards.forEach(b => {
+    if (b.typography?.display?.family) families.add(b.typography.display.family);
+    if (b.typography?.body?.family) families.add(b.typography.body.family);
+    if (b.typography?.mono?.family) families.add(b.typography.mono.family);
+  });
+  if (families.size === 0) return;
+  const params = [...families].map(f =>
+    'family=' + encodeURIComponent(f).replace(/%20/g, '+') + ':ital,wght@0,400;0,500;0,600;0,700;1,400;1,700'
+  ).join('&');
+  const link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.href = 'https://fonts.googleapis.com/css2?' + params + '&display=swap';
+  document.head.appendChild(link);
+}
+
+function swatches(palette) {
+  if (!palette) return '';
+  const items = [];
+  if (palette.background) items.push({ color: palette.background, label: 'BG', hex: palette.background });
+  if (palette.signal) items.push({ color: palette.signal, label: 'Signal', hex: palette.signal });
+  if (palette.secondary) items.push({ color: palette.secondary, label: 'Secondary', hex: palette.secondary });
+  if (palette.neutrals) {
+    palette.neutrals.forEach((n, i) => {
+      items.push({ color: n, label: `N${i + 1}`, hex: n });
+    });
+  }
+  return items.map(s =>
+    `<div class="swatch">
+      <div class="swatch-color" style="background: ${esc(s.color)};"></div>
+      <span class="swatch-label">${esc(s.label)}</span>
+      <span class="swatch-hex">${esc(s.hex)}</span>
+    </div>`
+  ).join('');
+}
+
+function getWireframeHint(name) {
+  const lower = (name || '').toLowerCase();
+  if (lower.includes('hero')) return { label: 'Full-width', bars: [{ flex: 1 }] };
+  if (lower.includes('split') || lower.includes('editorial')) return { label: '2-col split', bars: [{ flex: 0.4, cls: 'narrow' }, { flex: 0.6, cls: 'wide' }] };
+  if (lower.includes('card') || lower.includes('feature') || lower.includes('grid') || lower.includes('team')) return { label: '3-col cards', bars: [{ flex: 1 }, { flex: 1 }, { flex: 1 }] };
+  if (lower.includes('metric') || lower.includes('stat')) return { label: '4-col metrics', bars: [{ flex: 1 }, { flex: 1 }, { flex: 1 }, { flex: 1 }] };
+  if (lower.includes('marquee')) return { label: 'Scrolling strip', bars: [{ flex: 1 }] };
+  if (lower.includes('testimonial')) return { label: '2-col cards', bars: [{ flex: 1 }, { flex: 1 }] };
+  return { label: 'Full-width', bars: [{ flex: 1 }] };
+}
+
+function getResolvedTokens() {
+  if (state.selectedBoard === null) return null;
+  const base = MOOD_BOARD_DATA[state.selectedBoard];
+  const o = state.tokenOverrides;
+  const paletteSource = o.palette !== null ? MOOD_BOARD_DATA[o.palette] : base;
+  const typoSource = o.typography !== null ? MOOD_BOARD_DATA[o.typography] : base;
+  const layoutSource = o.layout !== null ? MOOD_BOARD_DATA[o.layout] : base;
+  const heroSource = o.hero !== null ? MOOD_BOARD_DATA[o.hero] : base;
+  const aestheticSource = o.aesthetic !== null ? MOOD_BOARD_DATA[o.aesthetic] : base;
+
+  // Merge custom color overrides into resolved palette
+  const basePalette = { ...paletteSource.palette };
+  const cc = state.customColors;
+  if (cc.background) basePalette.background = cc.background;
+  if (cc.signal) basePalette.signal = cc.signal;
+  if (cc.secondary) basePalette.secondary = cc.secondary;
+  if (basePalette.neutrals) {
+    basePalette.neutrals = [...basePalette.neutrals];
+    basePalette.neutrals.forEach((n, i) => {
+      if (cc['n' + i]) basePalette.neutrals[i] = cc['n' + i];
+    });
+  }
+
+  return {
+    direction: base.name,
+    vibe: base.vibe,
+    aesthetic: aestheticSource.aesthetic,
+    palette: basePalette,
+    typography: typoSource.typography,
+    layout: layoutSource.layout,
+    hero: heroSource.hero,
+    animation: state.animationTech || null,
+  };
+}
+
+// ── Render: Board mockup (mini page preview) ──
+// Responds to all 5 tokens: palette, typography, layout, hero, aesthetic
+function renderBoardMockup(board) {
+  const p = board.palette || {};
+  const t = board.typography || {};
+  const layout = (board.layout || '').toLowerCase();
+  const hero = (board.hero || '').toLowerCase();
+  const aesthetic = (board.aesthetic || '').toLowerCase();
+  const bg = p.background || '#1a1a2e';
+  const signal = p.signal || '#c084fc';
+  const secondary = p.secondary || '#888';
+  const n1 = (p.neutrals && p.neutrals[0]) || '#f0f0f0';
+  const n2 = (p.neutrals && p.neutrals[1]) || '#ccc';
+  const n3 = (p.neutrals && p.neutrals[2]) || '#888';
+  const displayFont = t.display?.family ? `'${t.display.family}', serif` : 'serif';
+  const bodyFont = t.body?.family ? `'${t.body.family}', sans-serif` : 'sans-serif';
+  const monoFont = t.mono?.family ? `'${t.mono.family}', monospace` : 'monospace';
+  const displayWeight = t.display?.weight || 400;
+  const displayStyle = t.display?.style || 'normal';
+  const textOnBg = n1;
+  const textMuted = n2;
+  const surfaceBg = mixColor(bg, n1, 0.06);
+  const borderCol = mixColor(bg, n1, 0.1);
+
+  // ── Layout-driven styles ──
+  const isGrid = layout.includes('grid');
+  const isAsymmetric = layout.includes('asymmetric') || layout.includes('editorial');
+  const isBreathing = layout.includes('breathing');
+  const isFullBleed = layout.includes('full-bleed') || layout.includes('rhythm');
+
+  const sectionGap = isGrid ? '1px' : isBreathing ? '0' : '0';
+  const heroPadding = isBreathing ? '2.5rem 2rem' : isGrid ? '1.5rem 1rem' : '2rem 1.5rem';
+  const heroAlign = isAsymmetric ? 'left' : 'center';
+  const cardBorder = isGrid ? `1px solid ${borderCol}` : 'none';
+  const mockupBorder = isGrid ? `2px solid ${borderCol}` : `1px solid ${borderCol}`;
+  const ctaPadding = isBreathing ? '1.5rem 1rem' : '1rem';
+  // Full-bleed: alternate section backgrounds
+  const altBg = isFullBleed ? mixColor(bg, n1, 0.04) : surfaceBg;
+
+  // ── Aesthetic-driven styles ──
+  const isBrutalist = aesthetic.includes('brutalist');
+  const isOrganic = aesthetic.includes('organic');
+  const isTechnical = aesthetic.includes('technical') || aesthetic.includes('precision');
+  const isWarm = aesthetic.includes('warm') || aesthetic.includes('minimal');
+  const isEditorial = aesthetic.includes('editorial') || aesthetic.includes('clean');
+
+  const borderRadius = isBrutalist ? '0' : isOrganic ? '10px' : '6px';
+  const btnRadius = isBrutalist ? '0' : isOrganic ? '20px' : '4px';
+  const featureDotSize = isBrutalist ? '4px; width:16px; border-radius:0' : isOrganic ? '10px' : '8px';
+  const decorBorder = isBrutalist ? `2px solid ${textOnBg}` : 'none';
+
+  // ── Hero-driven content ──
+  let heroContent = '';
+  if (hero.includes('data') || hero.includes('metric')) {
+    // Data-driven hero: metrics-forward, terminal feel
+    heroContent = `
+      <div style="font-family:${esc(monoFont)}; font-size:0.35rem; letter-spacing:0.2em; text-transform:uppercase; opacity:0.4; margin-bottom:0.75rem;">System Status: Online</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; text-align:left; margin-bottom:0.75rem;">
+        <div style="padding:0.4rem 0.5rem; background:${esc(mixColor(bg, n1, 0.04))}; border:1px solid ${esc(borderCol)}; border-radius:${btnRadius};">
+          <div style="font-family:${esc(monoFont)}; font-size:0.3rem; letter-spacing:0.1em; text-transform:uppercase; color:${esc(textMuted)}; margin-bottom:0.15rem;">Throughput</div>
+          <div style="font-family:${esc(displayFont)}; font-weight:${displayWeight}; font-size:1rem; line-height:1;">${isTechnical ? '1.2M' : '847K'}</div>
+        </div>
+        <div style="padding:0.4rem 0.5rem; background:${esc(mixColor(bg, n1, 0.04))}; border:1px solid ${esc(borderCol)}; border-radius:${btnRadius};">
+          <div style="font-family:${esc(monoFont)}; font-size:0.3rem; letter-spacing:0.1em; text-transform:uppercase; color:${esc(textMuted)}; margin-bottom:0.15rem;">Latency</div>
+          <div style="font-family:${esc(displayFont)}; font-weight:${displayWeight}; font-size:1rem; line-height:1; color:${esc(signal)};">12ms</div>
+        </div>
+      </div>
+      <div style="font-family:${esc(monoFont)}; font-size:0.35rem; padding:0.35rem 0.5rem; background:${esc(mixColor(bg, n1, 0.03))}; border:1px solid ${esc(borderCol)}; border-radius:${btnRadius}; text-align:left; color:${esc(textMuted)};">
+        <span style="color:${esc(signal)};">$</span> deploy --production
+      </div>
+    `;
+  } else if (hero.includes('kinetic') || hero.includes('typography')) {
+    // Kinetic typography hero: massive text, no subtitle, text-forward
+    heroContent = `
+      <div style="font-family:${esc(displayFont)}; font-weight:${displayWeight}; font-style:${esc(displayStyle)}; font-size:2.2rem; line-height:0.95; letter-spacing:-0.03em; margin-bottom:0.3rem;">
+        Trans<span style="color:${esc(signal)};">form</span>
+      </div>
+      <div style="font-family:${esc(displayFont)}; font-weight:${displayWeight}; font-style:${esc(displayStyle)}; font-size:2.2rem; line-height:0.95; letter-spacing:-0.03em; margin-bottom:0.6rem;">
+        your notes
+      </div>
+      <div style="font-family:${esc(monoFont)}; font-size:0.35rem; letter-spacing:0.2em; text-transform:uppercase; color:${esc(textMuted)};">Creative tools for modern teams</div>
+    `;
+  } else if (hero.includes('3d') || hero.includes('webgl')) {
+    // 3D hero: simulated scene with geometric shapes
+    heroContent = `
+      <div style="position:relative; height:60px; margin-bottom:0.6rem;">
+        <div style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:40px; height:40px; border:1.5px solid ${esc(signal)}; border-radius:50%; opacity:0.6;"></div>
+        <div style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) rotate(45deg); width:55px; height:55px; border:1px solid ${esc(mixColor(signal, bg, 0.5))}; border-radius:4px; opacity:0.3;"></div>
+        <div style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:6px; height:6px; background:${esc(signal)}; border-radius:50%;"></div>
+      </div>
+      <h3 style="font-family:${esc(displayFont)}; font-weight:${displayWeight}; font-style:${esc(displayStyle)}; font-size:1.1rem;">Transform your notes</h3>
+      <p style="font-family:${esc(bodyFont)}; color:${esc(textMuted)}; font-size:0.5rem; margin:0.3rem auto 0.5rem;">Immersive experiences built for the web</p>
+      <span class="mockup-btn" style="background:${esc(signal)}; color:${esc(bg)}; border-radius:${btnRadius};">Explore</span>
+    `;
+  } else {
+    // Compositional hero (default): gradient + layered
+    heroContent = `
+      <div style="position:absolute; top:-20%; left:50%; transform:translateX(-50%); width:70%; height:70%; background:radial-gradient(circle, ${esc(signal)}22 0%, transparent 70%); border-radius:50%; pointer-events:none;"></div>
+      <div class="mockup-hero-tag" style="font-family:${esc(monoFont)}; color:${esc(textMuted)}; position:relative;">Designed for you</div>
+      <h3 style="font-family:${esc(displayFont)}; font-weight:${displayWeight}; font-style:${esc(displayStyle)}; position:relative;">Transform your notes</h3>
+      <p style="font-family:${esc(bodyFont)}; color:${esc(textMuted)}; position:relative;">Build beautiful documents with ease and precision</p>
+      <span class="mockup-btn" style="background:${esc(signal)}; color:${esc(bg)}; border-radius:${btnRadius}; position:relative;">Get Started</span>
+    `;
+  }
+
+  // ── Features section: layout-aware ──
+  let featuresHtml = '';
+  if (isAsymmetric) {
+    // Asymmetric: 2-col split with offset
+    featuresHtml = `
+      <div style="display:grid; grid-template-columns:2fr 3fr; gap:${sectionGap}; background:${isGrid ? esc(borderCol) : 'transparent'};">
+        <div style="padding:0.75rem 0.6rem; background:${esc(bg)}; ${isGrid ? 'border-right:1px solid ' + esc(borderCol) + ';' : ''}">
+          <div style="font-family:${esc(monoFont)}; font-size:0.3rem; letter-spacing:0.2em; text-transform:uppercase; color:${esc(signal)}; margin-bottom:0.3rem;">Features</div>
+          <div style="font-family:${esc(displayFont)}; font-weight:${displayWeight}; font-style:${esc(displayStyle)}; font-size:0.7rem; line-height:1.2;">Built different</div>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:${isGrid ? '1px' : '4px'}; background:${isGrid ? esc(borderCol) : 'transparent'};">
+          ${['Lightning Fast', 'Rock Solid'].map(title => `
+            <div style="background:${esc(bg)}; padding:0.6rem; ${isGrid ? '' : ''}">
+              <div style="width:${featureDotSize}; height:8px; background:${esc(signal)}; border-radius:${isBrutalist ? '0' : '50%'}; margin-bottom:0.3rem;"></div>
+              <div style="font-family:${esc(bodyFont)}; font-size:0.45rem; font-weight:500; margin-bottom:0.15rem;">${title}</div>
+              <div style="font-family:${esc(bodyFont)}; font-size:0.35rem; color:${esc(textMuted)}; opacity:0.6;">Every detail refined</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  } else {
+    featuresHtml = `
+      <div class="mockup-features" style="background:${esc(borderCol)};">
+        ${['Lightning Fast', 'Rock Solid', 'Pixel Perfect'].map(title => `
+          <div class="mockup-feature" style="background:${isFullBleed ? esc(altBg) : esc(bg)}; color:${esc(textOnBg)}; ${isGrid ? 'border:1px solid ' + esc(borderCol) + ';' : ''}">
+            <div class="mockup-feature-dot" style="background:${esc(signal)}; width:${featureDotSize}; height:8px; border-radius:${isBrutalist ? '0' : '50%'};"></div>
+            <h4 style="font-family:${esc(bodyFont)};">${title}</h4>
+            <p style="font-family:${esc(bodyFont)}; color:${esc(textMuted)};">Built with care and attention to every detail</p>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  }
+
+  // ── CTA section: aesthetic-aware ──
+  const ctaBg = isFullBleed ? altBg : surfaceBg;
+  const ctaExtra = isBrutalist
+    ? `border-top:2px solid ${textOnBg}; border-bottom:2px solid ${textOnBg};`
+    : '';
+
+  return `
+    <div class="board-mockup" style="border-radius:${borderRadius}; border:${mockupBorder};">
+      <div class="mockup-hero" style="background:${esc(bg)}; color:${esc(textOnBg)}; padding:${heroPadding}; text-align:${heroAlign}; position:relative; overflow:hidden;">
+        ${heroContent}
+      </div>
+      <div class="mockup-metrics" style="background:${esc(borderCol)};">
+        ${[
+          { val: '10K+', lbl: 'Users' },
+          { val: '99.9%', lbl: 'Uptime' },
+          { val: '50ms', lbl: 'Response' },
+          { val: '4.8', lbl: 'Rating' },
+        ].map(m => `
+          <div class="mockup-metric" style="background:${esc(surfaceBg)}; color:${esc(textOnBg)};">
+            <div class="mockup-metric-value" style="font-family:${esc(displayFont)}; font-weight:${displayWeight};">${m.val}</div>
+            <div class="mockup-metric-label" style="font-family:${esc(monoFont)}; color:${esc(textMuted)};">${m.lbl}</div>
+          </div>
+        `).join('')}
+      </div>
+      ${featuresHtml}
+      <div class="mockup-cta" style="background:${esc(ctaBg)}; color:${esc(textOnBg)}; padding:${ctaPadding}; ${ctaExtra} text-align:center; position:relative; overflow:hidden;">
+        ${isBrutalist ? '' : `<div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:50%; height:120%; background:radial-gradient(circle, ${esc(signal)}0d 0%, transparent 70%); pointer-events:none;"></div>`}
+        <h3 style="font-family:${esc(displayFont)}; font-weight:${displayWeight}; font-style:${esc(displayStyle)}; font-size:0.75rem; margin-bottom:0.25rem; position:relative;">Ready to begin?</h3>
+        <p style="font-family:${esc(bodyFont)}; color:${esc(textMuted)}; font-size:0.4rem; margin-bottom:0.4rem; position:relative;">Start building something remarkable today</p>
+        <span class="mockup-btn" style="background:${esc(signal)}; color:${esc(bg)}; font-size:0.4rem; padding:0.3rem 0.8rem; border-radius:${btnRadius}; position:relative;">Start Now</span>
+      </div>
+      <div class="mockup-footer" style="background:${esc(bg)}; border-top:1px solid ${esc(borderCol)}; border-radius:0 0 ${borderRadius} ${borderRadius};">
+        ${['Brand', 'Product', 'Company', 'Legal'].map(col => `
+          <div class="mockup-footer-col">
+            <div class="mockup-footer-heading" style="font-family:${esc(monoFont)}; color:${esc(textMuted)};">${col}</div>
+            <div class="mockup-footer-line" style="background:${esc(textOnBg)};"></div>
+            <div class="mockup-footer-line" style="background:${esc(textOnBg)}; width:55%;"></div>
+            <div class="mockup-footer-line" style="background:${esc(textOnBg)}; width:45%;"></div>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+}
+
+function compactSwatches(palette) {
+  if (!palette) return '';
+  const colors = [palette.background, palette.signal, palette.secondary, ...(palette.neutrals || [])].filter(Boolean);
+  return `<div class="palette">${colors.map(c => `<div class="swatch-color" style="background:${esc(c)};"></div>`).join('')}</div>`;
+}
+
+function renderTokenSummary(board) {
+  const t = board.typography || {};
+  const fonts = [t.display?.family, t.body?.family, t.mono?.family].filter(Boolean);
+  const tags = [board.layout, board.hero ? (board.hero.split('—')[0] || '').trim() : ''].filter(Boolean);
+  return `
+    <div class="token-summary">
+      ${compactSwatches(board.palette)}
+      <span class="token-summary-fonts">${fonts.map(f => esc(f)).join(' · ')}</span>
+      <div class="token-summary-tags">
+        ${tags.map(t => `<span class="token-summary-tag">${esc(t)}</span>`).join('')}
+      </div>
+    </div>
+  `;
+}
+
+// Simple hex color mixing helper
+function mixColor(base, mix, amount) {
+  function parse(c) {
+    c = (c || '#000000').replace('#', '');
+    if (c.length === 3) c = c[0]+c[0]+c[1]+c[1]+c[2]+c[2];
+    return [parseInt(c.substring(0,2),16)||0, parseInt(c.substring(2,4),16)||0, parseInt(c.substring(4,6),16)||0];
+  }
+  const b = parse(base), m = parse(mix);
+  const r = Math.round(b[0] + (m[0] - b[0]) * amount);
+  const g = Math.round(b[1] + (m[1] - b[1]) * amount);
+  const bl = Math.round(b[2] + (m[2] - b[2]) * amount);
+  return '#' + [r,g,bl].map(v => Math.max(0,Math.min(255,v)).toString(16).padStart(2,'0')).join('');
+}
+
+// ── Render: Section preview (rich component wireframe) ──
+function renderSectionPreview(sectionName, tokens) {
+  if (!tokens) return '';
+  const p = tokens.palette || {};
+  const t = tokens.typography || {};
+  const bg = p.background || '#1a1a2e';
+  const signal = p.signal || '#c084fc';
+  const secondary = p.secondary || '#888';
+  const n1 = (p.neutrals && p.neutrals[0]) || '#f0f0f0';
+  const n2 = (p.neutrals && p.neutrals[1]) || '#ccc';
+  const n3 = (p.neutrals && p.neutrals[2]) || '#888';
+  const displayFont = t.display?.family ? `'${t.display.family}', serif` : 'serif';
+  const bodyFont = t.body?.family ? `'${t.body.family}', sans-serif` : 'sans-serif';
+  const monoFont = t.mono?.family ? `'${t.mono.family}', monospace` : 'monospace';
+  const displayWeight = t.display?.weight || 400;
+  const displayStyle = t.display?.style || 'normal';
+  const textOnBg = n1;
+  const textMuted = n2;
+  const surfaceBg = mixColor(bg, n1, 0.06);
+  const borderCol = mixColor(bg, n1, 0.1);
+
+  const lower = (sectionName || '').toLowerCase();
+
+  if (lower.includes('hero')) {
+    return `
+      <div class="section-preview">
+        <div class="preview-hero" style="background:${esc(bg)}; color:${esc(textOnBg)};">
+          <div class="preview-hero-glow" style="background:${esc(signal)};"></div>
+          <div class="preview-hero-tag" style="font-family:${esc(monoFont)}; color:${esc(textMuted)};">Introducing the future</div>
+          <h3 style="font-family:${esc(displayFont)}; font-weight:${displayWeight}; font-style:${esc(displayStyle)};">Transform your workflow</h3>
+          <p style="font-family:${esc(bodyFont)}; color:${esc(textMuted)};">The modern platform for teams who ship fast and build beautifully</p>
+          <span class="preview-btn" style="background:${esc(signal)}; color:${esc(bg)}; font-family:${esc(bodyFont)};">Get Started Free</span>
+        </div>
+      </div>
+    `;
+  }
+
+  if (lower.includes('metric') || lower.includes('stat')) {
+    return `
+      <div class="section-preview">
+        <div class="preview-metrics" style="background:${esc(borderCol)};">
+          ${[
+            { val: '10K+', lbl: 'Active users' },
+            { val: '99.9%', lbl: 'Uptime SLA' },
+            { val: '50ms', lbl: 'Avg latency' },
+            { val: '4.8', lbl: 'User rating' },
+          ].map(m => `
+            <div class="preview-metric" style="background:${esc(surfaceBg)}; color:${esc(textOnBg)};">
+              <div class="preview-metric-value" style="font-family:${esc(displayFont)}; font-weight:${displayWeight};">${m.val}</div>
+              <div class="preview-metric-label" style="font-family:${esc(monoFont)}; color:${esc(textMuted)};">${m.lbl}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  if (lower.includes('split') || lower.includes('editorial')) {
+    return `
+      <div class="section-preview">
+        <div class="preview-split" style="background:${esc(borderCol)};">
+          <div class="preview-split-text" style="background:${esc(bg)}; color:${esc(textOnBg)};">
+            <div class="preview-split-tag" style="font-family:${esc(monoFont)}; color:${esc(signal)};">Our approach</div>
+            <h3 style="font-family:${esc(displayFont)}; font-weight:${displayWeight}; font-style:${esc(displayStyle)};">Crafted with intention</h3>
+            <p style="font-family:${esc(bodyFont)}; color:${esc(textMuted)};">Every detail is considered. We believe great design emerges from constraint and clarity, not complexity.</p>
+          </div>
+          <div class="preview-split-image" style="background:${esc(surfaceBg)}; color:${esc(textMuted)};">
+            ◻ Image
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  if (lower.includes('card') || lower.includes('feature')) {
+    return `
+      <div class="section-preview">
+        <div class="preview-cards" style="background:${esc(borderCol)};">
+          ${[
+            { title: 'Lightning Fast', desc: 'Optimized for speed at every layer of the stack' },
+            { title: 'Rock Solid', desc: 'Enterprise-grade reliability you can count on' },
+            { title: 'Pixel Perfect', desc: 'Every detail refined to visual perfection' },
+          ].map(card => `
+            <div class="preview-card" style="background:${esc(bg)}; color:${esc(textOnBg)};">
+              <div class="preview-card-dot" style="background:${esc(signal)};"></div>
+              <h4 style="font-family:${esc(bodyFont)};">${card.title}</h4>
+              <p style="font-family:${esc(bodyFont)}; color:${esc(textMuted)};">${card.desc}</p>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  if (lower.includes('publication') || lower.includes('list') || lower.includes('blog') || lower.includes('article')) {
+    return `
+      <div class="section-preview">
+        <div class="preview-pub-list" style="background:${esc(bg)}; color:${esc(textOnBg)};">
+          ${[
+            { date: 'Jan 2025', title: 'Rethinking Design Systems at Scale' },
+            { date: 'Dec 2024', title: 'The Future of Component Architecture' },
+            { date: 'Nov 2024', title: 'Why Simplicity Wins Every Time' },
+          ].map(pub => `
+            <div class="preview-pub-row" style="border-color:${esc(borderCol)};">
+              <span class="preview-pub-date" style="font-family:${esc(monoFont)}; color:${esc(textMuted)};">${pub.date}</span>
+              <span class="preview-pub-title" style="font-family:${esc(bodyFont)};">${pub.title}</span>
+              <span class="preview-pub-arrow" style="color:${esc(signal)};">→</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  if (lower.includes('marquee')) {
+    const repeated = 'Latest Release · Now Available · Version 2.0 · ';
+    return `
+      <div class="section-preview">
+        <div class="preview-marquee" style="background:${esc(signal)};">
+          <div class="preview-marquee-text" style="font-family:${esc(monoFont)}; color:${esc(bg)};">${repeated.repeat(3)}</div>
+        </div>
+      </div>
+    `;
+  }
+
+  if (lower.includes('testimonial') || lower.includes('quote') || lower.includes('review')) {
+    return `
+      <div class="section-preview">
+        <div class="preview-testimonials" style="background:${esc(borderCol)};">
+          ${[
+            { text: '"This completely changed how our team works. The attention to detail is remarkable."', attr: '— Sarah Chen, CTO' },
+            { text: '"Finally, a tool that understands what good design really means. Highly recommended."', attr: '— James Park, Designer' },
+          ].map(q => `
+            <div class="preview-quote" style="background:${esc(bg)}; color:${esc(textOnBg)};">
+              <div class="preview-quote-text" style="font-family:${esc(bodyFont)};">${q.text}</div>
+              <div class="preview-quote-attr" style="font-family:${esc(monoFont)}; color:${esc(textMuted)};">${q.attr}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  if (lower.includes('team') || lower.includes('grid')) {
+    return `
+      <div class="section-preview">
+        <div class="preview-team" style="background:${esc(borderCol)};">
+          ${[
+            { name: 'Alex Rivera', role: 'Founder' },
+            { name: 'Sam Nguyen', role: 'Design Lead' },
+            { name: 'Jordan Lee', role: 'Engineering' },
+          ].map(m => `
+            <div class="preview-team-card" style="background:${esc(bg)}; color:${esc(textOnBg)};">
+              <div class="preview-avatar" style="background:${esc(textOnBg)};"></div>
+              <div class="preview-team-name" style="font-family:${esc(bodyFont)};">${m.name}</div>
+              <div class="preview-team-role" style="font-family:${esc(monoFont)}; color:${esc(textMuted)};">${m.role}</div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  if (lower.includes('cta') || lower.includes('call')) {
+    return `
+      <div class="section-preview">
+        <div class="preview-cta" style="background:${esc(surfaceBg)}; color:${esc(textOnBg)};">
+          <div class="preview-cta-glow" style="background:${esc(signal)};"></div>
+          <h3 style="font-family:${esc(displayFont)}; font-weight:${displayWeight}; font-style:${esc(displayStyle)}; position:relative;">Ready to get started?</h3>
+          <p style="font-family:${esc(bodyFont)}; color:${esc(textMuted)}; position:relative;">Join thousands of teams already building better</p>
+          <span class="preview-btn" style="background:${esc(signal)}; color:${esc(bg)}; font-family:${esc(bodyFont)}; position:relative;">Start Building</span>
+        </div>
+      </div>
+    `;
+  }
+
+  if (lower.includes('footer')) {
+    return `
+      <div class="section-preview">
+        <div class="preview-footer" style="background:${esc(bg)}; color:${esc(textOnBg)}; border-color:${esc(borderCol)};">
+          ${['Brand', 'Product', 'Company', 'Legal'].map(col => `
+            <div class="preview-footer-col">
+              <div class="preview-footer-heading" style="font-family:${esc(monoFont)}; color:${esc(textMuted)};">${col}</div>
+              <div class="preview-footer-line" style="background:${esc(textOnBg)};"></div>
+              <div class="preview-footer-line" style="background:${esc(textOnBg)}; width:50%;"></div>
+              <div class="preview-footer-line" style="background:${esc(textOnBg)}; width:40%;"></div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  // Fallback: generic full-width section
+  return `
+    <div class="section-preview">
+      <div style="background:${esc(surfaceBg)}; color:${esc(textOnBg)}; padding:0.75rem 1rem; text-align:center;">
+        <div style="font-family:${esc(monoFont)}; font-size:0.35rem; letter-spacing:0.15em; text-transform:uppercase; color:${esc(textMuted)}; margin-bottom:0.25rem;">Section</div>
+        <div style="font-family:${esc(displayFont)}; font-size:0.65rem; font-weight:${displayWeight}; line-height:1.3;">${esc(sectionName)}</div>
+      </div>
+    </div>
+  `;
+}
+
+// ── Render: Phase 1 — Board cards ──
+function renderBoards(boards) {
+  return boards.map((b, i) => `
+    <div class="board${state.selectedBoard === i ? ' selected' : ''}" data-board="${i}">
+      <div class="board-number">Option ${String(i + 1).padStart(2, '0')}</div>
+      <div class="board-name">${esc(b.name)}</div>
+      <div class="board-vibe">${esc(b.vibe)}</div>
+
+      ${renderBoardMockup(b)}
+      ${renderTokenSummary(b)}
+
+      <button class="select-btn" data-board="${i}">
+        ${state.selectedBoard === i ? '✓ Selected as base' : 'Select as base'}
+      </button>
+    </div>
+  `).join('');
+}
+
+// ── Render: Mix bar ──
+function renderMixBar(boards) {
+  const categories = [
+    { key: 'palette', label: 'Palette' },
+    { key: 'typography', label: 'Typography' },
+    { key: 'layout', label: 'Layout' },
+    { key: 'hero', label: 'Hero' },
+    { key: 'aesthetic', label: 'Aesthetic' },
+  ];
+
+  const tokens = getResolvedTokens();
+
+  let previewHtml = '';
+  if (tokens) {
+    const p = tokens.palette;
+    const previewSwatches = [p?.background, p?.signal, p?.secondary].filter(Boolean);
+    previewHtml = `
+      <div class="mix-bar-preview">
+        <div class="mix-preview-swatches">
+          ${previewSwatches.map(c => `<div class="mix-preview-swatch" style="background:${esc(c)}"></div>`).join('')}
+        </div>
+        <span class="mix-preview-fonts">${esc(tokens.typography?.display?.family)} + ${esc(tokens.typography?.body?.family)}</span>
+      </div>
+    `;
+  }
+
+  // Color picker section
+  let colorPickerHtml = '';
+  if (tokens) {
+    const p = tokens.palette;
+    const colorSlots = [
+      { key: 'background', label: 'BG', desc: 'Page background', val: p?.background || '#000000' },
+      { key: 'signal', label: 'Signal', desc: 'CTAs, links, highlights', val: p?.signal || '#000000' },
+      { key: 'secondary', label: 'Secondary', desc: 'Badges, accents', val: p?.secondary || '#000000' },
+    ];
+    if (p?.neutrals) {
+      const neutralDescs = ['Primary text', 'Secondary text', 'Muted text', 'Borders, dividers'];
+      p.neutrals.forEach((n, i) => {
+        colorSlots.push({ key: 'n' + i, label: 'N' + (i + 1), desc: neutralDescs[i] || 'Neutral ' + (i+1), val: n });
+      });
+    }
+    const hasCustom = Object.keys(state.customColors).length > 0;
+    colorPickerHtml = `
+      <div class="color-picker-section">
+        <div class="mix-cat-label" style="margin-bottom:0.6rem;">Custom Colors</div>
+        <div class="color-picker-row">
+          ${colorSlots.map(s => `
+            <div class="color-picker-item">
+              <input type="color" class="color-picker-input" data-color-key="${s.key}" value="${esc(s.val)}">
+              <span class="color-picker-label">${esc(s.label)}</span>
+              <input type="text" class="color-picker-hex" data-color-key="${s.key}" value="${esc(s.val)}" maxlength="7">
+              <span class="color-picker-desc">${esc(s.desc)}</span>
+            </div>
+          `).join('')}
+          ${hasCustom ? '<button class="color-reset-btn" id="color-reset-btn">Reset</button>' : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  // Animation tech section
+  const animPreviews = {
+    'framer-motion': {
+      demo: `<div class="fm-demo-cards"><div class="fm-demo-card"></div><div class="fm-demo-card"></div><div class="fm-demo-card"></div><div class="fm-demo-card"></div></div>`,
+      caption: 'Spring-based physics for scroll reveals, layout animations, and gesture interactions. The default for React projects.',
+      techniques: ['whileInView reveals', 'staggerChildren', 'layout animations', 'spring physics', 'gesture handlers'],
+    },
+    'gsap': {
+      demo: `<div class="gsap-demo-bar"></div><div class="gsap-demo-dot"></div>`,
+      caption: 'Precise timeline control for complex, sequenced animations. Scroll-driven pinning, morphing, and advanced easing.',
+      techniques: ['ScrollTrigger pinning', 'timeline sequences', 'morphSVG', 'drawSVG', 'custom easing'],
+    },
+    'threejs': {
+      demo: `<div class="three-demo-scene"><div class="three-demo-ring"></div><div class="three-demo-shape"></div></div>`,
+      caption: '3D WebGL scenes — particle networks, organic geometry, wireframe objects, and procedural shaders in the hero section.',
+      techniques: ['particle fields', 'displacement blobs', 'wireframe terrain', 'custom shaders', 'mouse parallax'],
+    },
+    'spine': {
+      demo: `<div class="spine-demo-figure"><div class="spine-head"></div><div class="spine-torso"></div><div class="spine-bone spine-arm-l"></div><div class="spine-bone spine-arm-r"></div><div class="spine-bone spine-leg-l"></div><div class="spine-bone spine-leg-r"></div></div>`,
+      caption: '2D skeletal animation for character mascots, product illustrations, and interactive storytelling elements.',
+      techniques: ['skeletal rigs', 'mesh deformation', 'animation blending', 'event triggers', 'IK constraints'],
+    },
+    'lottie': {
+      demo: `<div class="lottie-demo-circle"></div><div class="lottie-demo-check"></div>`,
+      caption: 'After Effects animations exported as lightweight JSON. Icons, micro-interactions, loading states, and illustrated sequences.',
+      techniques: ['icon animations', 'loading states', 'scroll-synced playback', 'interactive triggers', 'illustrated sequences'],
+    },
+    'css': {
+      demo: `<div class="css-demo-grid"><div class="css-demo-bar"></div><div class="css-demo-bar"></div><div class="css-demo-bar"></div><div class="css-demo-bar"></div><div class="css-demo-bar"></div><div class="css-demo-bar"></div></div>`,
+      caption: 'Pure CSS transitions and keyframes. Zero dependencies, maximum performance. Best for subtle reveals and ambient motion.',
+      techniques: ['@keyframes loops', 'transition on state', 'scroll-driven (CSS)', 'view transitions', 'hover effects'],
+    },
+    'rive': {
+      demo: `<div class="rive-demo-btn">Interact</div>`,
+      caption: 'Interactive state machines for buttons, toggles, and complex UI components that respond to user input with multi-state animations.',
+      techniques: ['state machines', 'input-driven transitions', 'nested artboards', 'procedural animation', 'runtime control'],
+    },
+  };
+
+  const selectedAnimPreview = state.animationTech ? animPreviews[state.animationTech] : null;
+
+  const animHtml = `
+    <div class="anim-section">
+      <div class="mix-cat-label" style="margin-bottom:0.6rem;">Animation Technology</div>
+      <div class="anim-options">
+        ${ANIMATION_OPTIONS.map(a => `
+          <div class="anim-chip${state.animationTech === a.id ? ' selected' : ''}" data-anim-id="${a.id}">
+            <div class="anim-chip-dot"></div>
+            ${esc(a.name)}
+            <span class="anim-chip-desc">${esc(a.desc)}</span>
+          </div>
+        `).join('')}
+      </div>
+      <div class="anim-preview${selectedAnimPreview ? ' visible' : ''}" id="anim-preview">
+        ${selectedAnimPreview ? `
+          <div class="anim-preview-header">
+            <span class="anim-preview-title">${esc(ANIMATION_OPTIONS.find(a => a.id === state.animationTech)?.name || '')} Preview</span>
+            <span class="anim-preview-note">Preview only — actual build uses real implementation</span>
+          </div>
+          <div class="anim-preview-demo">${selectedAnimPreview.demo}</div>
+          <div class="anim-preview-caption">${esc(selectedAnimPreview.caption)}</div>
+          <div class="anim-preview-techniques">
+            ${selectedAnimPreview.techniques.map(t => `<span class="anim-preview-tag">${esc(t)}</span>`).join('')}
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+
+  // Merged preview mockup
+  let mergedPreviewHtml = '';
+  if (tokens) {
+    mergedPreviewHtml = `
+      <div class="merged-preview">
+        <div class="mix-cat-label" style="margin-bottom:0.6rem;">Live Preview</div>
+        ${renderBoardMockup({
+          palette: tokens.palette,
+          typography: tokens.typography,
+          layout: tokens.layout,
+          hero: tokens.hero,
+          aesthetic: tokens.aesthetic,
+        })}
+      </div>
+    `;
+  }
+
+  return `
+    <div class="mix-bar-inner">
+      <div class="mix-bar-header">
+        <span class="mix-bar-title">Mix & Match Tokens</span>
+        ${previewHtml}
+      </div>
+      <div class="mix-categories">
+        ${categories.map(cat => `
+          <div class="mix-category">
+            <div class="mix-cat-label">${cat.label}</div>
+            ${boards.map((b, i) => {
+              const active = state.tokenOverrides[cat.key] === null
+                ? i === state.selectedBoard
+                : state.tokenOverrides[cat.key] === i;
+              let preview = '';
+              if (cat.key === 'palette') preview = esc(b.palette?.signal || '');
+              else if (cat.key === 'typography') preview = esc(b.typography?.display?.family || '');
+              else if (cat.key === 'layout') preview = esc(b.layout || '');
+              else if (cat.key === 'hero') preview = esc((b.hero || '').split('—')[0].trim());
+              else if (cat.key === 'aesthetic') preview = esc(b.aesthetic || '');
+              return `
+                <div class="mix-option${active ? ' active' : ''}" data-cat="${cat.key}" data-board="${i}">
+                  <div class="mix-radio"><div class="dot"></div></div>
+                  <span class="mix-option-label">${String(i + 1)}. ${preview}</span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        `).join('')}
+      </div>
+      ${mergedPreviewHtml}
+      ${colorPickerHtml}
+      ${animHtml}
+    </div>
+  `;
+}
+
+// ── Render: Section builder ──
+function renderSections() {
+  const list = document.getElementById('sortable-list');
+  if (!list) return;
+
+  const tokens = getResolvedTokens();
+
+  list.innerHTML = state.sections.map((sec, i) => {
+    return `
+      <li class="section-item" data-index="${i}">
+        <div class="drag-handle" aria-label="Drag to reorder">⠿</div>
+        <div class="section-number">${String(i + 1).padStart(2, '0')}</div>
+        <div class="section-content">
+          <div class="section-name-row">
+            <input class="section-name" type="text" value="${esc(sec.name)}" data-index="${i}" aria-label="Section name">
+          </div>
+          ${renderSectionPreview(sec.name, tokens)}
+          <button class="note-toggle${sec.comment ? ' has-note' : ''}" data-index="${i}">
+            ${sec.comment ? '▾ Note' : '▸ Add note'}
+          </button>
+          <div class="note-area${sec.comment ? ' visible' : ''}" data-index="${i}">
+            <textarea class="note-textarea" data-index="${i}" placeholder="Instructions for Claude…">${esc(sec.comment)}</textarea>
+          </div>
+        </div>
+        <div class="section-actions">
+          <button class="remove-btn" data-index="${i}" aria-label="Remove section">✕</button>
+        </div>
+      </li>
+    `;
+  }).join('');
+}
+
+// ── Full render ──
+let sortableInstance = null;
+
+function render(boards) {
+  if (!boards || !boards.length) {
+    document.getElementById('app').innerHTML = '<div class="loading">No mood board data found.</div>';
+    return;
+  }
+
+  loadFonts(boards);
+
+  const isSelected = state.selectedBoard !== null;
+
+  document.getElementById('app').innerHTML = `
+    <div class="header">
+      <div class="header-tag">Frontend Studio</div>
+      <h1>Design Workbench</h1>
+      <p>Pick a direction, mix tokens, arrange sections, and confirm your design spec.</p>
+    </div>
+
+    <div class="phase-label">01 — Pick a direction</div>
+    <div class="boards" id="phase1-boards">
+      ${renderBoards(boards)}
+    </div>
+
+    <div class="mix-bar${isSelected ? ' visible' : ''}" id="mix-bar">
+      ${isSelected ? renderMixBar(boards) : ''}
+    </div>
+
+    <div class="phase-label${isSelected ? '' : ' disabled'}">02 — Arrange your sections</div>
+    <div class="section-builder${isSelected ? ' visible' : ''}" id="section-builder">
+      <ul class="sortable-list" id="sortable-list"></ul>
+      <div class="add-section-wrap">
+        <button class="add-section-btn" id="add-section-btn">＋ Add Section</button>
+        <div class="add-dropdown" id="add-dropdown">
+          ${SECTION_TYPES.map(t => `<button class="add-option" data-type="${esc(t)}">${esc(t)}</button>`).join('')}
+          <input class="add-custom-input" id="custom-section-input" type="text" placeholder="Custom section name…">
+        </div>
+      </div>
+    </div>
+
+    <div class="phase-label${isSelected ? '' : ' disabled'}">03 — Confirm</div>
+    <div class="confirm-phase${isSelected ? ' visible' : ''}" id="confirm-phase">
+      <button class="confirm-btn" id="confirm-btn">Confirm Design</button>
+      <div class="output-wrap" id="output-wrap">
+        <div class="output-header">
+          <span class="output-label">Final Spec</span>
+          <button class="copy-btn" id="copy-btn">Copy</button>
+        </div>
+        <pre class="output-json" id="output-json"></pre>
+        <p class="output-instruction">Tell Claude "confirmed" to proceed with this spec</p>
+      </div>
+    </div>
+  `;
+
+  if (isSelected) {
+    renderSections();
+    initSortable();
+  }
+
+  bindEvents(boards);
+}
+
+// ── SortableJS ──
+function initSortable() {
+  const list = document.getElementById('sortable-list');
+  if (!list) return;
+  if (sortableInstance) sortableInstance.destroy();
+  sortableInstance = new Sortable(list, {
+    handle: '.drag-handle',
+    animation: 200,
+    ghostClass: 'sortable-ghost',
+    chosenClass: 'sortable-chosen',
+    onEnd(evt) {
+      const item = state.sections.splice(evt.oldIndex, 1)[0];
+      state.sections.splice(evt.newIndex, 0, item);
+      renderSections();
+      bindSectionEvents();
+    },
+  });
+}
+
+// ── Events ──
+function bindEvents(boards) {
+  // Board selection
+  document.querySelectorAll('.select-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const idx = parseInt(btn.dataset.board);
+      selectBoard(boards, idx);
+    });
+  });
+
+  document.querySelectorAll('.board').forEach(card => {
+    card.addEventListener('click', () => {
+      const idx = parseInt(card.dataset.board);
+      selectBoard(boards, idx);
+    });
+  });
+
+  // Mix bar
+  document.querySelectorAll('.mix-option').forEach(opt => {
+    opt.addEventListener('click', () => {
+      const cat = opt.dataset.cat;
+      const boardIdx = parseInt(opt.dataset.board);
+      if (boardIdx === state.selectedBoard) {
+        state.tokenOverrides[cat] = null;
+      } else {
+        state.tokenOverrides[cat] = boardIdx;
+      }
+      if (cat === 'palette') state.customColors = {};
+      updateMixBar(boards);
+    });
+  });
+
+  // Color picker + animation events (initial render)
+  bindColorPickerEvents(boards);
+  bindAnimationEvents(boards);
+
+  // Section builder events
+  bindSectionEvents();
+
+  // Add section
+  const addBtn = document.getElementById('add-section-btn');
+  const dropdown = document.getElementById('add-dropdown');
+  if (addBtn && dropdown) {
+    addBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      dropdown.classList.toggle('visible');
+    });
+
+    dropdown.querySelectorAll('.add-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        state.sections.push({ name: opt.dataset.type, comment: '' });
+        dropdown.classList.remove('visible');
+        renderSections();
+        bindSectionEvents(boards);
+      });
+    });
+
+    const customInput = document.getElementById('custom-section-input');
+    if (customInput) {
+      customInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && customInput.value.trim()) {
+          state.sections.push({ name: customInput.value.trim(), comment: '' });
+          customInput.value = '';
+          dropdown.classList.remove('visible');
+          renderSections();
+          bindSectionEvents(boards);
+        }
+      });
+    }
+
+    // Close dropdown on outside click
+    document.addEventListener('click', (e) => {
+      if (!dropdown.contains(e.target) && e.target !== addBtn) {
+        dropdown.classList.remove('visible');
+      }
+    });
+  }
+
+  // Confirm
+  const confirmBtn = document.getElementById('confirm-btn');
+  if (confirmBtn) {
+    confirmBtn.addEventListener('click', () => {
+      confirmDesign();
+    });
+  }
+
+  // Copy
+  const copyBtn = document.getElementById('copy-btn');
+  if (copyBtn) {
+    copyBtn.addEventListener('click', () => {
+      const json = document.getElementById('output-json')?.textContent;
+      if (json) {
+        navigator.clipboard.writeText(json).then(() => {
+          copyBtn.textContent = 'Copied';
+          copyBtn.classList.add('copied');
+          setTimeout(() => {
+            copyBtn.textContent = 'Copy';
+            copyBtn.classList.remove('copied');
+          }, 2000);
+        });
+      }
+    });
+  }
+}
+
+// Use event delegation so events survive DOM re-renders
+let sectionDelegationBound = false;
+
+function bindSectionEvents() {
+  if (sectionDelegationBound) return;
+  sectionDelegationBound = true;
+
+  document.addEventListener('click', (e) => {
+    // Remove button
+    const removeBtn = e.target.closest('.remove-btn');
+    if (removeBtn) {
+      e.stopPropagation();
+      const idx = parseInt(removeBtn.dataset.index);
+      if (!isNaN(idx) && state.sections[idx]) {
+        state.sections.splice(idx, 1);
+        renderSections();
+      }
+      return;
+    }
+
+    // Note toggle
+    const noteToggle = e.target.closest('.note-toggle');
+    if (noteToggle) {
+      e.stopPropagation();
+      const idx = parseInt(noteToggle.dataset.index);
+      const area = document.querySelector('.note-area[data-index="' + idx + '"]');
+      if (area) {
+        area.classList.toggle('visible');
+        noteToggle.textContent = area.classList.contains('visible') ? '▾ Note' : '▸ Add note';
+      }
+      return;
+    }
+  });
+
+  document.addEventListener('input', (e) => {
+    // Section name editing
+    if (e.target.classList.contains('section-name')) {
+      const idx = parseInt(e.target.dataset.index);
+      if (!isNaN(idx) && state.sections[idx]) {
+        state.sections[idx].name = e.target.value;
+      }
+      return;
+    }
+
+    // Note textarea
+    if (e.target.classList.contains('note-textarea')) {
+      const idx = parseInt(e.target.dataset.index);
+      if (!isNaN(idx) && state.sections[idx]) {
+        state.sections[idx].comment = e.target.value;
+        const toggle = document.querySelector('.note-toggle[data-index="' + idx + '"]');
+        if (toggle) {
+          toggle.classList.toggle('has-note', !!e.target.value);
+        }
+      }
+      return;
+    }
+  });
+}
+
+function selectBoard(boards, idx) {
+  state.selectedBoard = idx;
+  // Reset overrides
+  Object.keys(state.tokenOverrides).forEach(k => state.tokenOverrides[k] = null);
+  // Populate sections from board
+  state.sections = (boards[idx].sections || []).map(name => ({
+    name: typeof name === 'string' ? name : name.name || '',
+    comment: '',
+  }));
+  // Re-render
+  render(boards);
+  // Scroll to mix bar
+  setTimeout(() => {
+    const mixBar = document.getElementById('mix-bar');
+    if (mixBar) mixBar.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 50);
+}
+
+// Lightweight update: refresh section previews + header swatches + merged mockup
+// without replacing the mix-bar DOM (so native color pickers stay open).
+function updatePreviews() {
+  renderSections();
+  bindSectionEvents();
+
+  const tokens = getResolvedTokens();
+  if (tokens) {
+    // Update the small preview swatches in the mix-bar header
+    const p = tokens.palette;
+    const swatchEls = document.querySelectorAll('.mix-preview-swatch');
+    const previewColors = [p?.background, p?.signal, p?.secondary].filter(Boolean);
+    swatchEls.forEach((el, i) => {
+      if (previewColors[i]) el.style.background = previewColors[i];
+    });
+
+    // Update the merged preview mockup
+    const mergedEl = document.querySelector('.merged-preview');
+    if (mergedEl) {
+      mergedEl.innerHTML = `
+        <div class="mix-cat-label" style="margin-bottom:0.6rem;">Live Preview</div>
+        ${renderBoardMockup({
+          palette: tokens.palette,
+          typography: tokens.typography,
+          layout: tokens.layout,
+          hero: tokens.hero,
+          aesthetic: tokens.aesthetic,
+        })}
+      `;
+    }
+  }
+}
+
+function updateMixBar(boards) {
+  const mixBar = document.getElementById('mix-bar');
+  if (mixBar) {
+    mixBar.innerHTML = renderMixBar(boards);
+    // Re-bind mix bar events
+    document.querySelectorAll('.mix-option').forEach(opt => {
+      opt.addEventListener('click', () => {
+        const cat = opt.dataset.cat;
+        const boardIdx = parseInt(opt.dataset.board);
+        if (boardIdx === state.selectedBoard) {
+          state.tokenOverrides[cat] = null;
+        } else {
+          state.tokenOverrides[cat] = boardIdx;
+        }
+        // Reset custom colors when palette source changes
+        if (cat === 'palette') {
+          state.customColors = {};
+        }
+        updateMixBar(boards);
+      });
+    });
+
+    bindColorPickerEvents(boards);
+    bindAnimationEvents(boards);
+  }
+  // Re-render section previews with updated tokens
+  renderSections();
+  bindSectionEvents();
+}
+
+function bindColorPickerEvents(boards) {
+  document.querySelectorAll('.color-picker-input').forEach(input => {
+    input.addEventListener('input', () => {
+      const key = input.dataset.colorKey;
+      state.customColors[key] = input.value;
+      // Sync the hex text input next to it
+      const hexInput = document.querySelector('.color-picker-hex[data-color-key="' + key + '"]');
+      if (hexInput) hexInput.value = input.value;
+      // Don't nuke the DOM — just refresh previews
+      updatePreviews();
+    });
+  });
+
+  document.querySelectorAll('.color-picker-hex').forEach(input => {
+    input.addEventListener('change', () => {
+      const key = input.dataset.colorKey;
+      let val = input.value.trim();
+      if (val && !val.startsWith('#')) val = '#' + val;
+      if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+        state.customColors[key] = val;
+        const picker = document.querySelector('.color-picker-input[data-color-key="' + key + '"]');
+        if (picker) picker.value = val;
+        updatePreviews();
+      }
+    });
+  });
+
+  const resetBtn = document.getElementById('color-reset-btn');
+  if (resetBtn) {
+    resetBtn.addEventListener('click', () => {
+      state.customColors = {};
+      // Full re-render to reset all picker values
+      updateMixBar(boards);
+    });
+  }
+}
+
+function bindAnimationEvents(boards) {
+  document.querySelectorAll('.anim-chip').forEach(chip => {
+    chip.addEventListener('click', () => {
+      const id = chip.dataset.animId;
+      state.animationTech = state.animationTech === id ? null : id;
+      // Toggle selected class in-place
+      document.querySelectorAll('.anim-chip').forEach(c => {
+        c.classList.toggle('selected', c.dataset.animId === state.animationTech);
+      });
+      // Update the animation preview panel
+      updateMixBar(boards);
+    });
+  });
+}
+
+function confirmDesign() {
+  const tokens = getResolvedTokens();
+  if (!tokens) return;
+
+  const spec = {
+    direction: tokens.direction,
+    vibe: tokens.vibe,
+    aesthetic: tokens.aesthetic,
+    palette: tokens.palette,
+    typography: tokens.typography,
+    layout: tokens.layout,
+    hero: tokens.hero,
+    animation: tokens.animation || undefined,
+    sections: state.sections.map(s => ({
+      name: s.name,
+      comment: s.comment || '',
+    })),
+  };
+
+  const json = JSON.stringify(spec, null, 2);
+
+  // Write to hidden textarea
+  document.getElementById('FINAL_SPEC').value = json;
+
+  // Write to localStorage
+  try { localStorage.setItem('frontend-studio-spec', json); } catch(e) {}
+
+  // Save spec to file via local server endpoint
+  fetch('/.mood-boards-spec.json', { method: 'PUT', body: json, headers: { 'Content-Type': 'application/json' } }).catch(() => {});
+
+  // Show output
+  const outputWrap = document.getElementById('output-wrap');
+  const outputJson = document.getElementById('output-json');
+  if (outputWrap && outputJson) {
+    outputJson.textContent = json;
+    outputWrap.classList.add('visible');
+    outputWrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+}
+
+// Initialize
+render(MOOD_BOARD_DATA);
+</script>
+</body>
+</html>

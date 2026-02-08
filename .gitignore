@@ -1,19 +1,11 @@
-node_modules
-.next
-out
-coverage
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-.env.local
-.env.*.local
+node_modules/
 .DS_Store
-public/generated/*
-!public/generated/.gitkeep
-public/mood-boards/*
-!public/mood-boards/.gitkeep
-mood-board-options.json
-generation-config.json
-tsconfig.tsbuildinfo
 ._*
+
+# Temp files created during skill execution
+.mood-boards.html
+.mood-boards-spec.json
+.mood-boards-test.html
+
+# Demo projects (not part of the skill)
+inkd-landing/
